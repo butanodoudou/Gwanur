@@ -30,3 +30,6 @@ desktop.ini
 # IDE config
 .idea/
 .vscode/
+
+# Claude Code
+.claude/
