@@ -1,0 +1,15 @@
+# Normalize line endings to LF on commit
+* text=auto eol=lf
+
+# Binary assets - never touch line endings
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ogg binary
+*.mp3 binary
+*.wav binary
+*.ttf binary
+*.otf binary
+*.import binary
