@@ -1,8 +1,16 @@
 ; Engine configuration file.
 ; It's best edited using the editor UI and not directly,
-; but this file is committed to git as the source of truth.
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
 
 config_version=5
+
+[animation]
+
+compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 [application]
 
@@ -10,7 +18,7 @@ config/name="Gwanur"
 config/description="Local co-op exploration and puzzle game. Two half-elf twins, Kael and Mira, solve puzzles together in a medieval heroic fantasy world."
 config/version="0.1.0"
 config/tags=PackedStringArray("co-op", "puzzle", "fantasy")
-config/features=PackedStringArray("4.3", "Forward Plus")
+config/features=PackedStringArray("4.6", "Forward Plus")
 config/run/main_scene="res://scenes/main.tscn"
 config/run/max_fps=60
 
@@ -18,10 +26,5 @@ config/run/max_fps=60
 
 window/size/viewport_width=1920
 window/size/viewport_height=1080
-window/size/resizable=true
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
-
-[rendering]
-
-renderer/rendering_method="forward_plus"
