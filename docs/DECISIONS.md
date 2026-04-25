@@ -179,6 +179,45 @@ Format :
 
 ---
 
+---
+
+## 2026-04-25 — Architecture technique des personnages
+
+### Scripts des personnages — héritage CharacterBase → Kael / Mira
+**Décision :** Un script de base `CharacterBase` (extends CharacterBody3D) gère le mouvement, la gravité et les interactions. `Kael` et `Mira` en héritent et ajoutent leurs skills propres.  
+**Raison :** Évite la duplication de code. Le mouvement est identique pour les deux — seuls les skills diffèrent. Facile à comprendre pour un débutant.  
+**Impact :** `scripts/characters/character_base.gd`, `kael.gd`, `mira.gd`
+
+---
+
+### Contrôles
+**Décision :** Joueur 1 (Kael) → clavier ZQSD + E (interagir) + A (skill1) + R (skill2). Joueur 2 (Mira) → manette (stick gauche + A/X/Y).  
+**Raison :** ZQSD est le standard pour les claviers AZERTY français. La manette couvre tous les layouts de gamepad courants (Xbox/PS).  
+**Impact :** Input map définie dans `project.godot` — actions nommées `joueur1_*` et `joueur2_*`
+
+---
+
+### Système de split-screen
+**Décision :** Deux `SubViewport` (own_world_3d=false) dans un `HBoxContainer` plein écran via `CanvasLayer`. Chaque SubViewport a sa propre `Camera3D` qui suit son personnage.  
+**Raison :** `own_world_3d=false` permet aux deux viewports de rendre le même monde 3D depuis deux caméras différentes — c'est l'approche native Godot 4 pour le split-screen local.  
+**Impact :** `scenes/main.tscn` restructuré. Connexion caméra↔personnage faite par code dans `scripts/main.gd`
+
+---
+
+### Caméra follow
+**Décision :** Script `camera_follow.gd` (extends Camera3D) avec `offset: Vector3` et `lissage: float`. La cible est assignée par main.gd au démarrage (pas en éditeur).  
+**Raison :** Les caméras sont dans les SubViewports et les personnages dans le Monde — deux branches d'arbre différentes. La connexion par code est plus propre que les NodePath cross-tree.  
+**Impact :** `scripts/camera/camera_follow.gd`
+
+---
+
+### Placeholder des personnages
+**Décision :** Kael et Mira utilisent une `CapsuleMesh` (r=0.3, h=1.8) comme modèle temporaire jusqu'à l'intégration des vrais assets 3D.  
+**Raison :** Permet de tester mouvement et split-screen sans attendre les modèles finaux.  
+**Impact :** `scenes/characters/kael.tscn` et `mira.tscn` — à remplacer quand les modèles Meshy/Blender sont prêts
+
+---
+
 ## À décider
 
 - [ ] Les lettres d'Aldric — contenu de chacune
