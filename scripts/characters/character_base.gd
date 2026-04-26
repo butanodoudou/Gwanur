@@ -1,6 +1,7 @@
 # scripts/characters/character_base.gd
 # Classe de base commune à Kael et Mira.
 # Gère le mouvement 3D, la gravité, et le système d'interaction.
+# Le mouvement est relatif à la caméra si camera_ref est assigné.
 
 class_name CharacterBase
 extends CharacterBody3D
@@ -10,10 +11,10 @@ extends CharacterBody3D
 
 const GRAVITE: float = 9.8
 
-# Émis quand le joueur appuie sur "interagir" dans une zone active
 signal interaction_declenchee
 
 var _peut_interagir: bool = false
+var camera_ref = null
 
 func _ready() -> void:
 	add_to_group("joueurs")
@@ -46,6 +47,15 @@ func _obtenir_direction() -> Vector3:
 		prefixe + "haut",
 		prefixe + "bas"
 	)
+	if dir_2d.length() < 0.1:
+		return Vector3.ZERO
+
+	if camera_ref:
+		var h = camera_ref.get_angle_h()
+		var avant = Vector3(-sin(h), 0.0, -cos(h))
+		var droite = Vector3(cos(h), 0.0, -sin(h))
+		return (droite * dir_2d.x + avant * -dir_2d.y).normalized()
+
 	return Vector3(dir_2d.x, 0.0, dir_2d.y).normalized()
 
 func _orienter_personnage(direction: Vector3) -> void:

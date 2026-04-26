@@ -1,33 +1,42 @@
 # scripts/camera/camera_follow.gd
-# Caméra qui suit un personnage depuis un angle légèrement au-dessus et derrière.
-# Une instance est utilisée dans chaque moitié du split-screen.
-#
-# Comment ça marche :
-#   - La caméra se déplace vers (position du personnage + offset) chaque frame.
-#   - Le "lissage" rend le mouvement doux — plus il est bas, plus c'est fluide.
-#   - look_at() fait pointer la caméra vers le personnage automatiquement.
+# Caméra orbitale qui suit un personnage.
+# Joueur 1 : clic droit + souris pour pivoter horizontalement.
+# Joueur 2 : stick droit de la manette pour pivoter.
 
 extends Camera3D
 
-# Décalage de la caméra par rapport au personnage (haut et derrière)
-# x=0 : centré horizontalement / y=6 : 6m au-dessus / z=9 : 9m derrière
-@export var offset: Vector3 = Vector3(0.0, 6.0, 9.0)
-
-# Vitesse de lissage du suivi — entre 0.0 (immobile) et 1.0 (instantané)
-# 0.08 donne un suivi doux, agréable à l'œil
+@export var distance: float = 9.0
+@export var hauteur: float = 6.0
 @export var lissage: float = 0.08
+@export var sensibilite_souris: float = 0.004
+@export var sensibilite_stick: float = 2.5
+@export var id_joueur: int = 1
 
-# Le personnage à suivre — assigné depuis main.gd au démarrage
 var cible: Node3D = null
+var _angle_h: float = 0.0
 
-func _process(_delta: float) -> void:
+# Utilisé par les personnages pour calculer le mouvement relatif à la caméra
+func get_angle_h() -> float:
+	return _angle_h
+
+func _unhandled_input(event: InputEvent) -> void:
+	if id_joueur != 1:
+		return
+	if event is InputEventMouseMotion and Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
+		_angle_h -= event.relative.x * sensibilite_souris
+
+func _process(delta: float) -> void:
 	if not cible:
 		return
 
-	# Calcule la position cible et se rapproche doucement (interpolation linéaire)
-	var position_cible = cible.global_position + offset
-	global_position = global_position.lerp(position_cible, lissage)
+	if id_joueur == 2:
+		var stick_x = Input.get_joy_axis(0, JOY_AXIS_RIGHT_X)
+		if abs(stick_x) > 0.15:
+			_angle_h -= stick_x * sensibilite_stick * delta
 
-	# Regarde toujours vers le personnage (sécurité : vérifie qu'on n'est pas au même endroit)
+	var offset = Vector3(sin(_angle_h) * distance, hauteur, cos(_angle_h) * distance)
+	var cible_pos = cible.global_position + offset
+	global_position = global_position.lerp(cible_pos, lissage)
+
 	if global_position.distance_to(cible.global_position) > 0.1:
 		look_at(cible.global_position, Vector3.UP)
