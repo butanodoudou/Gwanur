@@ -218,6 +218,36 @@ Format :
 
 ---
 
+## 2026-04-26 — Prototype Zone 1
+
+### Deux manettes
+**Décision :** Les deux joueurs utilisent des manettes (device 0 et device 1). Le clavier ZQSD reste en fallback pour le développeur seul.  
+**Raison :** La cible est des couples dont l'un n'est pas gamer — la manette est plus accessible et symétrique.  
+**Impact :** project.godot mis à jour. Layout : stick gauche = déplacer, A = interagir, X = skill 1, Y = skill 2.
+
+---
+
+### Géométrie procédurale pour le prototype
+**Décision :** zone1.gd crée le décor (sol, murs, maisons) en code via des BoxMesh/StaticBody3D colorés.  
+**Raison :** Évite des .tscn trop lourds avant l'intégration des vrais modèles 3D. Facile à modifier.  
+**Impact :** Zone 1 jouable immédiatement. Les blocs colorés seront remplacés par les assets Meshy/Blender.
+
+---
+
+### Puzzles Zone 1
+**Décision :** Trois puzzles définis et codés (porte double, oiseau, roue d'eau) + deux PNJ (Lira, Brennan) + grimoire avec choix de fin de zone.  
+**Raison :** Couvre les trois structures coop : simultané / maintenir+agir / communication verbale.  
+**Impact :** `scripts/puzzles/`, `scripts/npcs/pnj.gd`, `scenes/zones/zone1.tscn`
+
+---
+
+### Autoloads
+**Décision :** GameManager (état global : flags, moralité, choix) et DialogueManager (CanvasLayer : affiche les dialogues PNJ) sont des AutoLoads.  
+**Raison :** Accessibles depuis n'importe quel script sans référence explicite. Standard Godot 4.  
+**Impact :** Enregistrés dans project.godot. `scripts/globals/`
+
+---
+
 ## À décider
 
 - [ ] Les lettres d'Aldric — contenu de chacune

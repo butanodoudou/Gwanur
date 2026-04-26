@@ -1,9 +1,10 @@
-[gd_scene load_steps=10 format=3 uid="uid://main_scene_001"]
+[gd_scene load_steps=11 format=3 uid="uid://main_scene_001"]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://scenes/characters/kael.tscn" id="2_kael"]
 [ext_resource type="PackedScene" path="res://scenes/characters/mira.tscn" id="3_mira"]
 [ext_resource type="Script" path="res://scripts/camera/camera_follow.gd" id="4_camera"]
+[ext_resource type="PackedScene" path="res://scenes/zones/zone1.tscn" id="5_zone1"]
 
 [sub_resource type="ProceduralSkyMaterial" id="Sky_001"]
 
@@ -22,23 +23,18 @@ size = Vector3(40.0, 0.2, 40.0)
 [sub_resource type="BoxShape3D" id="SolShape_001"]
 size = Vector3(40.0, 0.2, 40.0)
 
-; ─────────────────────────────────────────────────────
-; Scène principale de Gwanur
+; ─────────────────────────────────────────────────────────────────────────
+; Scène principale de Gwanur — split-screen vertical
 ;
-; Structure :
 ;   Main (Node3D)
-;   ├── Monde          — tout ce qui existe dans le monde 3D
-;   │   ├── Environnement (WorldEnvironment + lumière)
-;   │   ├── Sol         — plan de collision pour les tests
-;   │   ├── Kael        — instance de scenes/characters/kael.tscn
-;   │   └── Mira        — instance de scenes/characters/mira.tscn
+;   ├── Monde          — monde 3D partagé : personnages + Zone 1
+;   │   ├── Environnement + Lumière
+;   │   ├── Sol         — plancher de secours (Zone 1 crée le sien)
+;   │   ├── Kael / Mira — personnages jouables
+;   │   └── Zone1       — instance de scenes/zones/zone1.tscn
 ;   └── UI (CanvasLayer)
-;       └── SplitScreen — deux SubViewports côte à côte (gauche=Kael, droite=Mira)
-;
-; Le split-screen utilise own_world_3d=false : les deux SubViewports partagent
-; le même monde 3D que la scène principale, chacun avec sa propre caméra.
-; La connexion caméra ↔ personnage est faite dans scripts/main.gd.
-; ─────────────────────────────────────────────────────
+;       └── SplitScreen — deux SubViewports côte à côte
+; ─────────────────────────────────────────────────────────────────────────
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_main")
@@ -48,15 +44,13 @@ script = ExtResource("1_main")
 [node name="Environnement" type="WorldEnvironment" parent="Monde"]
 environment = SubResource("Env_001")
 
-; Lumière directionnelle simulant le soleil — à régler dans l'éditeur Godot
-; (rotation suggérée : -45° sur X, 45° sur Y pour un éclairage latéral doux)
 [node name="LumiereDirectionnelle" type="DirectionalLight3D" parent="Monde"]
 transform = Transform3D(1, 0, 0, 0, 0.707107, -0.707107, 0, 0.707107, 0.707107, 0, 0, 0)
 light_color = Color(1, 0.952941, 0.8, 1)
 light_energy = 1.2
 shadow_enabled = true
 
-; Sol temporaire pour les tests — sera remplacé par le décor de la Zone 1
+; Sol de secours — Zone 1 crée son propre sol plus grand
 [node name="Sol" type="StaticBody3D" parent="Monde"]
 position = Vector3(0, -0.1, 0)
 
@@ -66,17 +60,19 @@ shape = SubResource("SolShape_001")
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Monde/Sol"]
 mesh = SubResource("SolMesh_001")
 
-; Instances des personnages — leurs scripts gèrent mouvement et skills
+; Personnages — positions de départ à l'entrée du couloir de Zone 1
 [node name="Kael" parent="Monde" instance=ExtResource("2_kael")]
-position = Vector3(-1.5, 0.0, 0.0)
+position = Vector3(-1.5, 0.0, -1.0)
 
 [node name="Mira" parent="Monde" instance=ExtResource("3_mira")]
-position = Vector3(1.5, 0.0, 0.0)
+position = Vector3(1.5, 0.0, -1.0)
 
-; ── Interface du split-screen ──────────────────────────────────────────────
+; Zone 1 — Le Village des Lisières
+[node name="Zone1" parent="Monde" instance=ExtResource("5_zone1")]
+
+; ── Interface split-screen ──────────────────────────────────────────────
 [node name="UI" type="CanvasLayer" parent="."]
 
-; HBoxContainer plein écran : contient les deux moitiés du split
 [node name="SplitScreen" type="HBoxContainer" parent="UI"]
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -84,7 +80,7 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 0
 
-; ── Moitié gauche — vue de Kael ────────────────────────────────────────────
+; Moitié gauche — vue de Kael
 [node name="ViewportGauche" type="SubViewportContainer" parent="UI/SplitScreen"]
 layout_mode = 2
 size_flags_horizontal = 3
@@ -94,11 +90,10 @@ stretch = true
 own_world_3d = false
 size = Vector2i(960, 1080)
 
-; Caméra de Kael — cible assignée par main.gd au démarrage
 [node name="CameraKael" type="Camera3D" parent="UI/SplitScreen/ViewportGauche/SubViewportKael"]
 script = ExtResource("4_camera")
 
-; ── Moitié droite — vue de Mira ────────────────────────────────────────────
+; Moitié droite — vue de Mira
 [node name="ViewportDroit" type="SubViewportContainer" parent="UI/SplitScreen"]
 layout_mode = 2
 size_flags_horizontal = 3
@@ -108,6 +103,5 @@ stretch = true
 own_world_3d = false
 size = Vector2i(960, 1080)
 
-; Caméra de Mira — cible assignée par main.gd au démarrage
 [node name="CameraMira" type="Camera3D" parent="UI/SplitScreen/ViewportDroit/SubViewportMira"]
 script = ExtResource("4_camera")
