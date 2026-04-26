@@ -248,6 +248,62 @@ Format :
 
 ---
 
+## 2026-04-26 — Mécanique de la Lanterne
+
+### Conditions d'activation des échos
+**Décision :** La Lanterne à Mémoire révèle toujours des silhouettes floues. Pour que l'écho devienne net et utilisable, Mira doit avoir réuni un "contexte" au préalable : parler à un témoin, trouver un objet lié à la scène, lire une inscription.  
+**Raison :** Évite que la lanterne soit trop facile (scanner le niveau pour trouver toutes les solutions). Crée un vrai loop d'exploration : indice → retour à l'endroit → compréhension → puzzle.  
+**Impact :** Les échos proches/récents = accessibles avec contexte. Les échos anciens = nécessitent le skill "Mémoire Profonde" débloqué en progression.
+
+---
+
+## 2026-04-26 — Ciblage automatique pour les skills
+
+### Brassards de Sève — ciblage auto
+**Décision :** La liane pousse automatiquement vers la surface végétale la plus proche dans la direction de Kael. Pas de visée manuelle.  
+**Raison :** La cible est des couples avec un non-gamer. La visée manuelle crée de la frustration pour les joueurs peu habitués aux contrôles. La version automatique reste suffisamment précise pour les puzzles de Zone 1 et 2.  
+**Impact :** `kael.gd` détecte la surface végétale la plus proche dans un cône de 45° devant le joueur. Le ciblage manuel pourrait être introduit comme skill avancé dans Zone 3+.
+
+### Grappin de Cuivre — ciblage assisté
+**Décision :** Le grappin cible le point d'accroche le plus proche dans la direction de Mira (ciblage assisté, pas manuel).  
+**Raison :** Même raison que pour les Brassards. La visée libre peut frustrer un partenaire non-gamer.  
+**Impact :** Les points d'accroche brillent légèrement pour indiquer qu'ils sont disponibles. Un seul bouton = une seule action claire.
+
+---
+
+## 2026-04-26 — Design Zone 2
+
+### La Forêt Entrelacée — mécanique centrale
+**Décision :** Zone 2 introduit "La Forêt Parle" — chaque joueur reçoit une information *différente* de la forêt (Kael ressent / Mira voit). Ni l'un ni l'autre ne peut résoudre seul. La communication verbale entre joueurs devient la mécanique principale.  
+**Raison :** Progression naturelle depuis Zone 1 où l'environnement était passif. Zone 2 fait de la forêt un personnage actif qui teste les jumeaux.  
+**Impact :** Tous les puzzles de Zone 2 reposent sur l'échange d'informations verbales entre les joueurs, pas seulement sur les actions.
+
+### Le calme de Kael comme ressource
+**Décision :** En Zone 2, la forêt ne répond aux Brassards de Kael que s'il est immobile. S'il court, les plantes se referment.  
+**Raison :** Crée une tension naturelle : Mira a besoin de lui *maintenant*, mais lui doit *s'arrêter* pour activer quelque chose. Les joueurs doivent négocier le timing — c'est un puzzle de coordination, pas d'action.  
+**Impact :** Introduce un type de puzzle nouveau : Kael en position fixe pendant que Mira gère l'environnement autour de lui.
+
+### Puzzles Zone 2 — trois structures
+**Décision :** Porte des Deux Cœurs (sync positionnelle), Rayon Brisé (coordination spatiale + craft), Deux Mémoires (communication verbale pure + révélation lore).  
+**Raison :** Progression en complexité. Le troisième puzzle est le plus narrativement fort — il révèle le titre d'Aelindra via le Gardien.  
+**Impact :** Zone 2 introduit le Sac d'Alchimiste de Mira (premier craft : éclat de cuivre poli) et le calme de Kael comme condition de jeu.
+
+---
+
+## 2026-04-26 — Décor et pipeline d'assets
+
+### Kit de modules pour la structure
+**Décision :** Les murs, sols et bâtiments sont construits avec un kit de modules réutilisables (Kenney Medieval Kit — CC0 gratuit). Modules placés dans l'éditeur Godot comme des Lego. Meshy AI pour les props uniques (objets spécifiques, détails narratifs).  
+**Raison :** 90% des jeux indie sont faits ainsi. Kenney permet de démarrer vite sans attendre les vrais modèles. Séparation claire entre la géométrie de collision (dans les scripts, permanente) et le visuel (remplaçable).  
+**Impact :** `zone1.gd` désactivé quand les vrais assets arrivent. Les scripts de puzzles et Area3D ne changent pas. Assets dans `assets/models/environnement/`.
+
+### Végétation procédurale
+**Décision :** `MultiMeshInstance3D` pour placer des milliers d'éléments de végétation (herbe, petites plantes) sans impact sur les performances.  
+**Raison :** Approche native Godot 4, performante, cohérente avec le style Ghibli qui demande beaucoup de verdure.  
+**Impact :** Pas de végétation un-par-un dans la scène. Un seul MultiMeshInstance3D par type de plante, configuré dans l'éditeur.
+
+---
+
 ## À décider
 
 - [ ] Les lettres d'Aldric — contenu de chacune

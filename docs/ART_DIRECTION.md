@@ -149,6 +149,50 @@ Godot 4
 
 ---
 
+## Pipeline Décor — Environnements
+
+### Structure : murs, sols, bâtiments
+
+Approche **kit de modules** — des blocs réutilisables assemblés dans l'éditeur Godot comme des Lego.
+
+**Sources :**
+- **Kenney.nl** — [Medieval Builder Pack](https://kenney.nl/assets/medieval-builder) (CC0, gratuit). Mur droit, coin, sol, porte, toit — parfait pour démarrer Zone 1 en une après-midi.
+- **Meshy AI** — pour les props uniques et narratifs (grimoire, roue d'eau, perchoir, etc.) qui n'existent pas dans les kits génériques.
+
+**Workflow :**
+1. Importer les `.GLB` dans `assets/models/environnement/`
+2. Placer dans la scène via l'éditeur Godot (pas en code)
+3. Désactiver la géométrie procédurale de `zone1.gd` (les `_bloc()` calls)
+4. Les scripts de puzzles et `Area3D` de collision **ne changent pas**
+
+### Ambiance : végétation, lumière, détails
+
+Ce qui crée l'effet Ghibli :
+
+| Élément | Technique Godot |
+|---|---|
+| Lumière soleil chaud | `DirectionalLight3D` avec `light_color` doré, `shadow_enabled` |
+| Intérieurs | `OmniLight3D` placés manuellement |
+| Végétation dense | `MultiMeshInstance3D` — milliers de brins d'herbe sans impact perfs |
+| Ciel et brume | `WorldEnvironment` — `ProceduralSkyMaterial` + `fog_enabled` |
+| Profondeur | Ambient occlusion dans `Environment` + `glow` léger |
+
+### Transition prototype → production
+
+```
+Prototype (actuel)
+└─ zone1.gd génère les boîtes colorées en code
+   └─ Collision = BoxShape3D (permanent)
+   └─ Visuel = BoxMesh + StandardMaterial3D (temporaire)
+
+Production (plus tard)
+└─ zone1.tscn dans l'éditeur : modules Kenney + props Meshy
+   └─ Collision inchangée (scripts de puzzles ne bougent pas)
+   └─ Visuel remplacé par les vrais modèles .GLB
+```
+
+---
+
 ## UI & Interface
 
 - **Style :** Minimal, organique — pas de métal froid ou de néon
