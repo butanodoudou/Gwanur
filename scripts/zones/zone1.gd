@@ -30,6 +30,7 @@ var _attente_choix: bool = false
 func _ready() -> void:
 	set_process(false)
 	_construire_village()
+	_coloriser_puzzles()
 	_configurer_echo_liane()
 	_connecter_puzzles()
 
@@ -162,6 +163,17 @@ func _appliquer_choix(choix: String) -> void:
 # ──────────────────────────────────────────────────────────────────────────
 # HELPERS — CRÉATION DE GÉOMÉTRIE
 # ──────────────────────────────────────────────────────────────────────────
+
+func _coloriser_puzzles() -> void:
+	_appliquer_couleur($Puzzle1PorteDouble/Porte/MeshInstance3D, Color(0.30, 0.15, 0.08))
+	_appliquer_couleur($Puzzle2Oiseau/Grille/MeshInstance3D, Color(0.50, 0.50, 0.55))
+	_appliquer_couleur($Puzzle3RoueEau/RoueEau/MeshInstance3D, Color(0.35, 0.22, 0.12))
+	_appliquer_couleur($Puzzle3RoueEau/Pont/MeshInstance3D, Color(0.45, 0.32, 0.18))
+
+func _appliquer_couleur(mi: MeshInstance3D, couleur: Color) -> void:
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = couleur
+	mi.set_surface_override_material(0, mat)
 
 func _sol(taille: Vector3, pos: Vector3) -> void:
 	_bloc(taille, pos, COULEUR_SOL)
