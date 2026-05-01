@@ -540,6 +540,59 @@ Format :
 
 ---
 
+---
+
+## 2026-05-02 — Pivot majeur : RPG solo avec combats
+
+### Genre
+**Décision :** Le jeu passe de "coop puzzle obligatoire" à **RPG solo avec combats**, jouable à 1 ou 2 joueurs en mode drop-in/drop-out façon Fable 2.
+**Raison :** Le format puzzle-coop obligatoire limitait trop le public. Le lore héroïc fantasy se prête naturellement au combat.
+**Impact :** Refonte du gameplay central. Le lore, les personnages et les 5 zones restent identiques.
+
+---
+
+### Mode solo
+**Décision :** En solo, le joueur choisit entre Kael ou Mira. L'autre personnage est contrôlé par une **IA compagnon**.
+**Raison :** Cohérent avec Fable 2. Les deux personnages restent présents narrativement — la tension Kael/Mira est conservée.
+**Impact :** Nécessite un système d'IA compagnon (follow + combat basique + ordres simples).
+
+---
+
+### Mode coop (Fable 2)
+**Décision :** Le joueur 2 peut rejoindre ou quitter à tout moment sans interrompre le jeu. Quand il quitte, l'IA reprend.
+**Raison :** Fable 2 est la référence exacte voulue. Drop-in/drop-out fluide.
+**Impact :**
+- **Plus de split-screen** → caméra partagée dynamique (zoom out quand les joueurs s'éloignent)
+- Le joueur 2 est "invité" : HUD simplifié, pas d'accès à la carte
+- Si les joueurs sont trop loin : le joueur 2 est téléporté près du joueur 1
+
+---
+
+### Combat
+**Décision :** Combats en **temps réel action RPG** (pas tour par tour). Style Tales of Arise / Fable.
+**Raison :** Cohérent avec le lore héroïc fantasy et l'ambiance dynamique voulue.
+**Impact :**
+- Kael : mage nature — sorts de lianes, vent, lumière. Corps-à-corps faible.
+- Mira : guerrière physique — grappin offensif, bombes alchimiques, corps-à-corps fort.
+- Système HP/mana/stamina à créer
+- Ennemis à définir par zone
+
+---
+
+### Puzzles
+**Décision :** Les puzzles restent mais deviennent **optionnels / secondaires**. Ce ne sont plus des bloquants de progression.
+**Raison :** Dans un RPG solo avec combat, bloquer la progression sur un puzzle coop obligatoire serait frustrant en solo.
+**Impact :** Les puzzles deviennent des quêtes secondaires ou des accès à du lore/équipement bonus.
+
+---
+
+### Caméra
+**Décision :** Caméra partagée unique, **orbitale + zoom dynamique**. Plus de SubViewport split-screen.
+**Raison :** Fable 2 n'a pas de split-screen. La caméra suit les deux personnages et zoome out si nécessaire.
+**Impact :** Refonte de main.tscn et camera_follow.gd. Les SubViewports sont supprimés.
+
+---
+
 ## À décider
 
 - [ ] Les lettres d'Aldric — contenu de chacune des 5 lettres
@@ -550,3 +603,6 @@ Format :
 - [ ] Le nom du village de Sylvara
 - [ ] La musique — compositeur, style, instruments
 - [ ] Le menu principal et l'UI
+- [ ] Types d'ennemis par zone
+- [ ] Système de stats (HP, mana, stamina, XP)
+- [ ] Arbre de compétences combat (distinct des skills narratifs)

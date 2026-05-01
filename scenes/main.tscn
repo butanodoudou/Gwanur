@@ -1,10 +1,9 @@
-[gd_scene format=3 uid="uid://oa5bdobk4q1e"]
+[gd_scene load_steps=8 format=3 uid="uid://oa5bdobk4q1e"]
 
 [ext_resource type="Script" uid="uid://co1vbkruhqggh" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://scenes/characters/kael.tscn" id="2_kael"]
-[ext_resource type="PackedScene" path="res://scenes/characters/mira.tscn" id="3_mira"]
+[ext_resource type="PackedScene" path="res://scenes/zones/zone1.tscn" id="3_zone1"]
 [ext_resource type="Script" uid="uid://cbebjacu4dqp3" path="res://scripts/camera/camera_follow.gd" id="4_camera"]
-[ext_resource type="PackedScene" path="res://scenes/zones/zone1.tscn" id="5_zone1"]
 
 [sub_resource type="ProceduralSkyMaterial" id="Sky_001"]
 
@@ -17,76 +16,40 @@ sky = SubResource("SkyRes_001")
 ambient_light_source = 3
 ambient_light_energy = 0.5
 
-[sub_resource type="BoxShape3D" id="SolShape_001"]
-size = Vector3(40, 0.2, 40)
+; ═══════════════════════════════════════════════════════════════════════════════
+; SCÈNE PRINCIPALE — Gwanur
+;
+; Un seul personnage actif (Kael par défaut), une seule caméra orbitale.
+; Zone1 contient le village de départ (Sylvara) avec l'Aelith au centre.
+;
+; Kael démarre à (0, 0, 5) — entrée sud du village, face à l'Aelith.
+; ═══════════════════════════════════════════════════════════════════════════════
 
-[sub_resource type="BoxMesh" id="SolMesh_001"]
-size = Vector3(40, 0.2, 40)
-
-[node name="Main" type="Node3D" unique_id=1505022381]
+[node name="Main" type="Node3D"]
 script = ExtResource("1_main")
 
-[node name="Monde" type="Node3D" parent="." unique_id=1665585317]
+[node name="Monde" type="Node3D" parent="."]
 
-[node name="Environnement" type="WorldEnvironment" parent="Monde" unique_id=1885054306]
+[node name="Environnement" type="WorldEnvironment" parent="Monde"]
 environment = SubResource("Env_001")
 
-[node name="LumiereDirectionnelle" type="DirectionalLight3D" parent="Monde" unique_id=474112086]
-transform = Transform3D(1, 0, 0, 0, 0.707107, -0.707107, 0, 0.707107, 0.707107, 0, 0, 0)
+; Lumière du jour — légèrement chaude, ombres activées
+[node name="LumiereDirectionnelle" type="DirectionalLight3D" parent="Monde"]
+transform = Transform3D(1, 0, 0, 0, 0.707107, -0.707107, 0, 0.707107, 0.707107, 0, 10, 0)
 light_color = Color(1, 0.952941, 0.8, 1)
 light_energy = 1.2
 shadow_enabled = true
 
-[node name="Sol" type="StaticBody3D" parent="Monde" unique_id=1290483327]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
+; Kael — personnage actif, démarre à l'entrée du village
+[node name="Kael" parent="Monde" instance=ExtResource("2_kael")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Monde/Sol" unique_id=889051253]
-shape = SubResource("SolShape_001")
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="Monde/Sol" unique_id=868492391]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.30794954, -0.022716515, -0.025736928)
-mesh = SubResource("SolMesh_001")
-
-[node name="Kael" parent="Monde" unique_id=778425548 instance=ExtResource("2_kael")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 0, -1)
-
-[node name="Mira" parent="Monde" unique_id=1097335263 instance=ExtResource("3_mira")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, -1)
-
-[node name="Zone1" parent="Monde" unique_id=114772456 instance=ExtResource("5_zone1")]
-
-[node name="UI" type="CanvasLayer" parent="." unique_id=195895546]
-
-[node name="SplitScreen" type="HBoxContainer" parent="UI" unique_id=2070311215]
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_constants/separation = 0
-
-[node name="ViewportGauche" type="SubViewportContainer" parent="UI/SplitScreen" unique_id=1233403392]
-layout_mode = 2
-size_flags_horizontal = 3
-stretch = true
-
-[node name="SubViewportKael" type="SubViewport" parent="UI/SplitScreen/ViewportGauche" unique_id=730767678]
-handle_input_locally = false
-size = Vector2i(960, 1080)
-render_target_update_mode = 4
-
-[node name="CameraKael" type="Camera3D" parent="UI/SplitScreen/ViewportGauche/SubViewportKael" unique_id=2075913125]
+; Caméra orbitale — main.gd lui assigne Kael comme cible
+[node name="Camera" type="Camera3D" parent="Monde"]
 script = ExtResource("4_camera")
 
-[node name="ViewportDroit" type="SubViewportContainer" parent="UI/SplitScreen" unique_id=1124261379]
-layout_mode = 2
-size_flags_horizontal = 3
-stretch = true
+; Village de départ — Sylvara
+[node name="Zone1" parent="Monde" instance=ExtResource("3_zone1")]
 
-[node name="SubViewportMira" type="SubViewport" parent="UI/SplitScreen/ViewportDroit" unique_id=854302651]
-handle_input_locally = false
-size = Vector2i(960, 1080)
-render_target_update_mode = 4
-
-[node name="CameraMira" type="Camera3D" parent="UI/SplitScreen/ViewportDroit/SubViewportMira" unique_id=1224469826]
-script = ExtResource("4_camera")
+; Réservé pour le HUD futur (dialogues, barres HP, etc.)
+[node name="UI" type="CanvasLayer" parent="."]

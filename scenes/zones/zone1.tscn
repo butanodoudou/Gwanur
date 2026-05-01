@@ -5,15 +5,13 @@
 [ext_resource type="Script" path="res://scripts/puzzles/puzzle_porte_double.gd" id="3_p1"]
 [ext_resource type="Script" path="res://scripts/puzzles/puzzle_oiseau.gd" id="4_p2"]
 [ext_resource type="Script" path="res://scripts/puzzles/puzzle_roue_eau.gd" id="5_p3"]
+[ext_resource type="PackedScene" path="res://assets/models/environnement/nimbus_willow_2_tree.glb" id="6_aelith"]
 
-; ── Zones d'interaction PNJ ──────────────────────────────────────────────
-[sub_resource type="SphereShape3D" id="ss_pnj_lira"]
+; Collision partagée par tous les PNJ (radius=2.0)
+[sub_resource type="SphereShape3D" id="ss_pnj"]
 radius = 2.0
 
-[sub_resource type="SphereShape3D" id="ss_pnj_brennan"]
-radius = 2.0
-
-; ── Puzzle 1 — Porte Double ───────────────────────────────────────────────
+; ── Puzzle 1 — Porte Double ───────────────────────────────────────────────────
 [sub_resource type="SphereShape3D" id="ss_p1_kael"]
 radius = 1.5
 
@@ -21,12 +19,12 @@ radius = 1.5
 radius = 1.5
 
 [sub_resource type="BoxShape3D" id="bs_porte"]
-size = Vector3(12.0, 4.0, 0.4)
+size = Vector3(8.0, 4.0, 0.4)
 
 [sub_resource type="BoxMesh" id="bm_porte"]
-size = Vector3(12.0, 4.0, 0.4)
+size = Vector3(8.0, 4.0, 0.4)
 
-; ── Puzzle 2 — Oiseau ─────────────────────────────────────────────────────
+; ── Puzzle 2 — Oiseau ─────────────────────────────────────────────────────────
 [sub_resource type="SphereMesh" id="sm_oiseau"]
 radius = 0.3
 height = 0.6
@@ -43,7 +41,7 @@ size = Vector3(8.0, 4.0, 0.3)
 [sub_resource type="SphereShape3D" id="ss_p2_verrou"]
 radius = 1.5
 
-; ── Puzzle 3 — Roue d'Eau ─────────────────────────────────────────────────
+; ── Puzzle 3 — Roue d'Eau ─────────────────────────────────────────────────────
 [sub_resource type="SphereShape3D" id="ss_p3_lanterne"]
 radius = 2.5
 
@@ -67,72 +65,108 @@ size = Vector3(5.0, 0.3, 4.0)
 [sub_resource type="BoxMesh" id="bm_pont"]
 size = Vector3(5.0, 0.3, 4.0)
 
-; ── Grimoire ──────────────────────────────────────────────────────────────
+; ── Grimoire ──────────────────────────────────────────────────────────────────
 [sub_resource type="SphereShape3D" id="ss_grimoire"]
 radius = 1.5
 
 [sub_resource type="BoxMesh" id="bm_grimoire"]
 size = Vector3(0.3, 0.4, 0.05)
 
-; ═════════════════════════════════════════════════════════════════════════
-; SCÈNE — Zone 1 : Le Village des Lisières
-; Couloir de z=0 (entrée) à z=-58 (fin), largeur 12m.
-; La géométrie visuelle (sol, murs, maisons) est créée par zone1.gd en _ready().
-; ═════════════════════════════════════════════════════════════════════════
+; ═════════════════════════════════════════════════════════════════════════════
+; SCÈNE — Zone 1 : Sylvara, le Village des Lisières
+;
+; Layout radial centré sur l'Aelith (0, 0, 0).
+; Entrée du village depuis le sud (+Z). Sortie vers Zone 2 au nord (-Z).
+; Rayon du village : ~15m.
+;
+; Géométrie procédurale (maisons, puits, palissade) créée dans zone1.gd.
+; ═════════════════════════════════════════════════════════════════════════════
 
 [node name="Zone1" type="Node3D"]
 script = ExtResource("1_zone1")
 
-; ── PNJ ───────────────────────────────────────────────────────────────────
+; ── L'Aelith ─────────────────────────────────────────────────────────────────
+; Nimbus Willow au centre. Scale à ajuster si le modèle est trop petit/grand.
+[node name="Aelith" parent="." instance=ExtResource("6_aelith")]
+transform = Transform3D(6, 0, 0, 0, 6, 0, 0, 0, 6, 0, 0, 0)
+
+; ── PNJ ───────────────────────────────────────────────────────────────────────
 [node name="PNJ" type="Node3D" parent="."]
 
-; Lira — parle de l'oiseau blanc qui suivait leur mère (déclenche Puzzle 2)
+; Vaenmor — L'Ancien. Assis au pied de l'Aelith, côté sud-est.
+; Son honorifique signifie "barbe cendre-vieux". Son vrai nom a été oublié.
+; Récompense : fragment de lettre 1 + raccourci Zone 2 si l'Épreuve de l'Aelith est résolue.
+[node name="Vaenmor" type="Node3D" parent="PNJ"]
+position = Vector3(4.0, 0.0, 3.5)
+script = ExtResource("2_pnj")
+nom_pnj = "Vaenmor"
+lignes = [
+	"Vous avez les yeux de quelqu'un que j'ai connu.",
+	"Drôle de chose à voir avant de mourir.",
+	"Elle savait que vous viendriez. Elle m'a demandé de vous guetter."
+]
+flag_apres = "vaenmor_parle"
+
+[node name="ZoneProximite" type="Area3D" parent="PNJ/Vaenmor"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="PNJ/Vaenmor/ZoneProximite"]
+shape = SubResource("ss_pnj")
+
+; Lira — voisine, parle de l'oiseau blanc (déclenche Puzzle 2)
 [node name="Lira" type="Node3D" parent="PNJ"]
-position = Vector3(5.0, 0.0, -4.0)
+position = Vector3(18.0, 0.0, 14.0)
 script = ExtResource("2_pnj")
 nom_pnj = "Lira"
-lignes = ["Ah, vous êtes les enfants d'Elara...", "Cet oiseau blanc, là-haut — il était toujours sur son toit. Il vous attend, je crois."]
+lignes = [
+	"Ah, vous êtes les enfants d'Elara...",
+	"Cet oiseau blanc, sur le toit là-bas — il était toujours là quand elle rentrait.",
+	"Il vous attend, je crois."
+]
 flag_apres = "lira_parlee"
 
 [node name="ZoneProximite" type="Area3D" parent="PNJ/Lira"]
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="PNJ/Lira/ZoneProximite"]
-shape = SubResource("ss_pnj_lira")
+shape = SubResource("ss_pnj")
 
-; Brennan — parle du vieux mécanisme cassé (déclenche Puzzle 3 / Lanterne)
+; Brennan — meunier, parle du mécanisme cassé (déclenche Puzzle 3)
 [node name="Brennan" type="Node3D" parent="PNJ"]
-position = Vector3(-5.0, 0.0, -18.0)
+position = Vector3(-20.0, 0.0, -12.0)
 script = ExtResource("2_pnj")
 nom_pnj = "Brennan"
-lignes = ["La roue s'est arrêtée le jour où Elara est partie.", "Comme si elle retenait quelque chose. Il y avait une liane, avant..."]
+lignes = [
+	"La roue s'est arrêtée le jour où Elara est partie.",
+	"Comme si elle retenait quelque chose.",
+	"Il y avait une liane qui courait le long du mur, avant. Elle a disparu avec elle."
+]
 flag_apres = "brennan_parle"
 
 [node name="ZoneProximite" type="Area3D" parent="PNJ/Brennan"]
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="PNJ/Brennan/ZoneProximite"]
-shape = SubResource("ss_pnj_brennan")
+shape = SubResource("ss_pnj")
 
-; ── PUZZLE 1 — La Porte à Deux Poignées ──────────────────────────────────
-; Kael (gauche) et Mira (droite) tirent ensemble → la porte monte.
+; ── PUZZLE 1 — La Porte à Deux Poignées ──────────────────────────────────────
+; Bloque le passage vers Zone 2 (nord, z=-18).
+; Kael et Mira doivent tenir leurs leviers simultanément.
 [node name="Puzzle1PorteDouble" type="Node3D" parent="."]
 script = ExtResource("3_p1")
 
 [node name="ZoneInteractionKael" type="Area3D" parent="Puzzle1PorteDouble"]
-position = Vector3(-4.0, 0.0, -9.0)
+position = Vector3(-5.0, 0.0, -34.0)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Puzzle1PorteDouble/ZoneInteractionKael"]
 shape = SubResource("ss_p1_kael")
 
 [node name="ZoneInteractionMira" type="Area3D" parent="Puzzle1PorteDouble"]
-position = Vector3(4.0, 0.0, -9.0)
+position = Vector3(5.0, 0.0, -34.0)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Puzzle1PorteDouble/ZoneInteractionMira"]
 shape = SubResource("ss_p1_mira")
 
-; La porte — monte quand les deux joueurs interagissent simultanément
 [node name="Porte" type="AnimatableBody3D" parent="Puzzle1PorteDouble"]
 sync_to_physics = false
-position = Vector3(0.0, 2.0, -10.0)
+position = Vector3(0.0, 2.0, -36.0)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Puzzle1PorteDouble/Porte"]
 shape = SubResource("bs_porte")
@@ -140,30 +174,28 @@ shape = SubResource("bs_porte")
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Puzzle1PorteDouble/Porte"]
 mesh = SubResource("bm_porte")
 
-; ── PUZZLE 2 — L'Oiseau et le Passage ────────────────────────────────────
-; Kael utilise la Corne → l'oiseau vole vers la plateforme → la grille s'ouvre.
-; Mira passe et active le verrou avant fermeture (12 secondes).
+; ── PUZZLE 2 — L'Oiseau et le Passage ────────────────────────────────────────
+; L'oiseau blanc est perché sur le toit de la maison voisin (est, z=-3).
+; Kael : Corne d'Appel → l'oiseau descend sur la plateforme → grille s'ouvre.
+; Mira passe et active le verrou avant que la grille se referme (12s).
 [node name="Puzzle2Oiseau" type="Node3D" parent="."]
 script = ExtResource("4_p2")
 
-; Oiseau — placeholder sphère, commence sur son perchoir en hauteur
 [node name="Oiseau" type="Node3D" parent="Puzzle2Oiseau"]
-position = Vector3(5.25, 3.4, -24.0)
+position = Vector3(22.0, 5.0, -6.0)
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Puzzle2Oiseau/Oiseau"]
 mesh = SubResource("sm_oiseau")
 
-; Position cible de l'oiseau (sur la plateforme de poids, près de Kael)
 [node name="PlateformePoids" type="Area3D" parent="Puzzle2Oiseau"]
-position = Vector3(-3.0, 0.2, -24.0)
+position = Vector3(6.0, 0.2, -14.0)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Puzzle2Oiseau/PlateformePoids"]
 shape = SubResource("ss_p2_plateforme")
 
-; Grille — bloque le passage, monte quand l'oiseau est sur la plateforme
 [node name="Grille" type="AnimatableBody3D" parent="Puzzle2Oiseau"]
 sync_to_physics = false
-position = Vector3(0.0, 2.0, -24.0)
+position = Vector3(0.0, 2.0, -26.0)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Puzzle2Oiseau/Grille"]
 shape = SubResource("bs_grille")
@@ -171,61 +203,55 @@ shape = SubResource("bs_grille")
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Puzzle2Oiseau/Grille"]
 mesh = SubResource("bm_grille")
 
-; Verrou — Mira interagit ici pour bloquer la grille définitivement
 [node name="ZoneVerrou" type="Area3D" parent="Puzzle2Oiseau"]
-position = Vector3(-4.0, 0.0, -30.0)
+position = Vector3(-6.0, 0.0, -32.0)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Puzzle2Oiseau/ZoneVerrou"]
 shape = SubResource("ss_p2_verrou")
 
-; ── PUZZLE 3 — La Roue d'Eau ──────────────────────────────────────────────
-; Prérequis : parler à Brennan (GameManager.brennan_parle).
-; Mira en position + Lanterne → echo visible → Kael fait pousser liane → roue tourne → pont s'étend.
+; ── PUZZLE 3 — La Roue d'Eau ──────────────────────────────────────────────────
+; Côté ouest du village, près du moulin de Brennan.
+; Un ruisseau (fossé) barre le passage à z=-17.
+; Mira : Lanterne → révèle l'écho de la liane.
+; Kael : Brassards → fait pousser la liane → roue tourne → pont se déploie.
 [node name="Puzzle3RoueEau" type="Node3D" parent="."]
 script = ExtResource("5_p3")
 
-; Zone où Mira doit se tenir avec sa Lanterne allumée
 [node name="ZoneLanterne" type="Area3D" parent="Puzzle3RoueEau"]
-position = Vector3(-4.0, 0.0, -40.0)
+position = Vector3(-20.0, 0.0, -16.0)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Puzzle3RoueEau/ZoneLanterne"]
 shape = SubResource("ss_p3_lanterne")
 
-; Zone où Kael doit utiliser ses Brassards
 [node name="ZoneLianes" type="Area3D" parent="Puzzle3RoueEau"]
-position = Vector3(0.0, 2.0, -38.0)
+position = Vector3(-14.0, 2.0, -26.0)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Puzzle3RoueEau/ZoneLianes"]
 shape = SubResource("ss_p3_lianes")
 
-; Écho de la liane — fantôme semi-transparent visible uniquement avec la Lanterne
-; Le matériau transparent est appliqué par zone1.gd._configurer_echo_liane()
 [node name="EchoLiane" type="MeshInstance3D" parent="Puzzle3RoueEau"]
-position = Vector3(0.0, 3.0, -38.0)
+position = Vector3(-14.0, 3.0, -26.0)
 visible = false
 mesh = SubResource("bm_echo")
 
-; Vraie liane — pousse quand le puzzle est résolu (scale.y part de 0 → 1)
 [node name="Lianes" type="AnimatableBody3D" parent="Puzzle3RoueEau"]
 sync_to_physics = false
-position = Vector3(0.0, 3.0, -38.0)
+position = Vector3(-14.0, 3.0, -26.0)
 scale = Vector3(1.0, 0.001, 1.0)
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Puzzle3RoueEau/Lianes"]
 mesh = SubResource("bm_lianes")
 
-; Roue d'eau — tourne quand la liane est en place
 [node name="RoueEau" type="AnimatableBody3D" parent="Puzzle3RoueEau"]
 sync_to_physics = false
-position = Vector3(0.0, 2.0, -40.0)
+position = Vector3(-18.0, 2.0, -30.0)
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Puzzle3RoueEau/RoueEau"]
 mesh = SubResource("cm_roue")
 
-; Pont — glisse de 4m en -Z pour franchir le fossé
 [node name="Pont" type="AnimatableBody3D" parent="Puzzle3RoueEau"]
 sync_to_physics = false
-position = Vector3(0.0, -0.05, -44.0)
+position = Vector3(-28.0, -0.05, -34.0)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Puzzle3RoueEau/Pont"]
 shape = SubResource("bs_pont")
@@ -233,15 +259,15 @@ shape = SubResource("bs_pont")
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Puzzle3RoueEau/Pont"]
 mesh = SubResource("bm_pont")
 
-; ── GRIMOIRE ──────────────────────────────────────────────────────────────
-; Activé par zone1.gd après que tous les puzzles sont résolus.
+; ── GRIMOIRE ──────────────────────────────────────────────────────────────────
+; Caché dans une vieille maison à l'angle nord-est.
+; Activé par zone1.gd après que les 3 puzzles sont résolus.
 [node name="ZoneGrimoire" type="Area3D" parent="."]
 monitoring = false
-position = Vector3(0.0, 0.5, -52.0)
+position = Vector3(8.0, 0.5, -40.0)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="ZoneGrimoire"]
 shape = SubResource("ss_grimoire")
 
-; Visuel du grimoire (petit livre)
 [node name="MeshInstance3D" type="MeshInstance3D" parent="ZoneGrimoire"]
 mesh = SubResource("bm_grimoire")
