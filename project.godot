@@ -26,6 +26,7 @@ run/max_fps=60
 
 GameManager="*res://scripts/globals/game_manager.gd"
 DialogueManager="*res://scripts/globals/dialogue_manager.gd"
+InteractionManager="*res://scripts/globals/interaction_manager.gd"
 
 [display]
 

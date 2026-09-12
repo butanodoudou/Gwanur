@@ -4,6 +4,12 @@
 
 extends Node
 
+# Émis quand un curseur de moralité bouge.
+# Le HUD de chaque joueur écoute ce signal pour afficher brièvement sa barre.
+#   id_joueur : 1 = Kael, 2 = Mira
+#   valeur    : la nouvelle valeur, entre -100 et +100
+signal moralite_changee(id_joueur: int, valeur: int)
+
 # ── Progression Zone 1 ─────────────────────────────────────────────────────
 var vaenmor_parle: bool = false     # Joueurs ont parlé à Vaenmor (donne la lettre d'Aldric)
 var lira_parlee: bool = false       # Joueurs ont parlé à Lira
@@ -25,9 +31,11 @@ var moralite_mira: int = 0
 
 func modifier_moralite_kael(valeur: int) -> void:
 	moralite_kael = clamp(moralite_kael + valeur, -100, 100)
+	moralite_changee.emit(1, moralite_kael)
 
 func modifier_moralite_mira(valeur: int) -> void:
 	moralite_mira = clamp(moralite_mira + valeur, -100, 100)
+	moralite_changee.emit(2, moralite_mira)
 
 func zone1_terminee() -> bool:
 	return puzzle1_resolu and puzzle2_resolu and puzzle3_resolu

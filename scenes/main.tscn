@@ -5,6 +5,7 @@
 [ext_resource type="PackedScene" path="res://scenes/characters/mira.tscn" id="3_mira"]
 [ext_resource type="PackedScene" path="res://scenes/zones/zone1.tscn" id="4_zone1"]
 [ext_resource type="Script" uid="uid://cbebjacu4dqp3" path="res://scripts/camera/camera_follow.gd" id="5_camera"]
+[ext_resource type="Script" path="res://scripts/ui/hud_joueur.gd" id="6_hud"]
 
 [sub_resource type="ProceduralSkyMaterial" id="Sky_001"]
 
@@ -62,6 +63,12 @@ render_target_update_mode = 4
 [node name="CameraKael" type="Camera3D" parent="SplitScreen/Conteneur/VueKael/SubViewport" unique_id=1930009376]
 script = ExtResource("5_camera")
 
+[node name="HudKael" type="Control" parent="SplitScreen/Conteneur/VueKael/SubViewport"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("6_hud")
+id_joueur = 1
+
 [node name="VueMira" type="SubViewportContainer" parent="SplitScreen/Conteneur" unique_id=1082441846]
 layout_mode = 2
 size_flags_horizontal = 3
@@ -74,6 +81,12 @@ render_target_update_mode = 4
 
 [node name="CameraMira" type="Camera3D" parent="SplitScreen/Conteneur/VueMira/SubViewport" unique_id=1998109595]
 script = ExtResource("5_camera")
+id_joueur = 2
+
+[node name="HudMira" type="Control" parent="SplitScreen/Conteneur/VueMira/SubViewport"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("6_hud")
 id_joueur = 2
 
 [node name="UI" type="CanvasLayer" parent="." unique_id=644599871]

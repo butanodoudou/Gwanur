@@ -518,6 +518,33 @@ Format :
 
 ---
 
+## 2026-09-12 — UI : HUD par joueur et gestionnaire d'interactions
+
+### Bug corrigé — le bouton d'interaction était lu par deux systèmes
+**Décision :** Créer un AutoLoad `InteractionManager`, seul endroit du jeu qui lit le bouton "interagir" et décide qui doit répondre.
+**Raison :** Chaque PNJ lisait l'input dans son propre `_process`, et le `DialogueManager` lisait le même bouton pour avancer d'une ligne. Les deux s'exécutaient dans la même frame : appuyer sur A faisait avancer le dialogue **puis** le PNJ le relançait depuis la ligne 1. Le texte restait bloqué sur sa première ligne tant que le joueur restait à portée du PNJ.
+**Impact :**
+- `scripts/globals/interaction_manager.gd` (nouvel AutoLoad, après DialogueManager)
+- `pnj.gd` ne lit plus l'input : il s'enregistre auprès du gestionnaire et expose `declencher()` + `obtenir_verbe()`
+- `DialogueManager.bloque_interaction()` couvre la frame de fermeture du dialogue, où `_actif` repasse à false avant que les autres systèmes n'aient tourné
+
+### HUD dans chaque moitié d'écran
+**Décision :** Le HUD est un `Control` placé **à l'intérieur du SubViewport** de chaque joueur, pas dans un CanvasLayer global.
+**Raison :** Chaque jumeau a son propre curseur de moralité et sa propre cible d'interaction. Dans une barre commune, chaque joueur devrait chercher laquelle des deux barres est la sienne, et le prompt deviendrait ambigu quand les deux peuvent interagir.
+**Impact :** `scripts/ui/hud_joueur.gd`, instancié deux fois dans `main.tscn` avec `id_joueur` 1 et 2. La boîte de dialogue reste globale — elle est partagée par les deux joueurs.
+
+### Moralité — affichage discret
+**Décision :** La barre de moralité reste invisible et n'apparaît que quelques secondes quand la valeur bouge, puis s'efface en fondu.
+**Raison :** Ambiance Ghibli — pas de jauge permanente qui surveille le joueur. Il sent son évolution sans avoir un HUD de jeu vidéo sous les yeux.
+**Impact :** `GameManager` émet `moralite_changee(id_joueur, valeur)`. Le HUD de chaque joueur ignore le signal de l'autre.
+
+### Tests automatisés
+**Décision :** Deux tests headless dans `tools/tests/`, lancés à la main en ligne de commande.
+**Raison :** Le bug d'interaction était invisible à la lecture et pénible à reproduire à la main. `test_interaction.gd` a un mode « contrôle négatif » (`-- --bug`) qui reproduit l'ancien comportement et doit échouer — ça prouve que le test teste vraiment quelque chose.
+**Impact :** Voir l'en-tête de chaque fichier pour la commande exacte.
+
+---
+
 ## À décider — Zone 1
 
 - [x] Les lettres d'Aldric — lettre 1 livrée par Vaenmor
@@ -525,5 +552,6 @@ Format :
 - [x] Le contenu exact du grimoire d'Aelindra
 - [ ] La musique — style, instruments (au moins un thème Zone 1)
 - [x] Le menu principal
-- [ ] UI — HUD moralité, indicateur d'interaction visuel
+- [x] UI — HUD moralité + indicateur d'interaction (par joueur, dans son SubViewport)
+- [ ] UI — retour visuel sur la progression du Puzzle 1 (savoir que l'autre tient sa poignée)
 - [ ] Détails visuels de l'Aelith (le modèle GLB est là, pas d'interaction propre)

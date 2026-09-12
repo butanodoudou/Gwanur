@@ -6,6 +6,11 @@
 #   lignes     : tableau de textes
 #   couleur    : couleur du placeholder (remplacé par le vrai modèle plus tard)
 #   flag_apres : flag GameManager à activer après la conversation
+#   verbe      : texte du prompt du HUD (vide → "Parler à <nom_pnj>")
+#
+# Le PNJ ne lit PAS le bouton lui-même : il se signale à l'InteractionManager
+# quand un joueur approche, et celui-ci appelle declencher() au bon moment.
+# (Voir le commentaire en tête de scripts/globals/interaction_manager.gd.)
 
 extends Node3D
 
@@ -13,8 +18,8 @@ extends Node3D
 @export var lignes: Array[String] = ["..."]
 @export var couleur: Color = Color(0.7, 0.5, 0.3)
 @export var flag_apres: String = ""
+@export var verbe: String = ""
 
-var _joueur_proche: bool = false
 var _deja_parle: bool = false
 var _label_indicateur: Label3D = null
 
@@ -49,19 +54,31 @@ func _creer_visuel() -> void:
 	add_child(label)
 	_label_indicateur = label
 
+# ──────────────────────────────────────────────────────────────────────────────
+# PROXIMITÉ — on signale sa présence au gestionnaire d'interactions
+# ──────────────────────────────────────────────────────────────────────────────
+
 func _sur_entree(body: Node3D) -> void:
 	if body.is_in_group("joueurs"):
-		_joueur_proche = true
+		InteractionManager.enregistrer(body.id_joueur, self)
 
 func _sur_sortie(body: Node3D) -> void:
 	if body.is_in_group("joueurs"):
-		_joueur_proche = false
+		InteractionManager.retirer(body.id_joueur, self)
 
-func _process(_delta: float) -> void:
-	if not _joueur_proche:
-		return
-	if Input.is_action_just_pressed("joueur1_interagir") or Input.is_action_just_pressed("joueur2_interagir"):
-		_parler()
+# ──────────────────────────────────────────────────────────────────────────────
+# INTERFACE ATTENDUE PAR L'INTERACTIONMANAGER
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Texte affiché dans le HUD du joueur quand il est à portée
+func obtenir_verbe() -> String:
+	if verbe != "":
+		return verbe
+	return "Parler à " + nom_pnj
+
+# Appelé quand le joueur appuie sur le bouton d'interaction
+func declencher(_id_joueur: int) -> void:
+	_parler()
 
 func _parler() -> void:
 	DialogueManager.afficher(nom_pnj, lignes)

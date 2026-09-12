@@ -27,6 +27,9 @@ var _index_ligne: int = 0
 var _minuterie: float = 0.0
 var _actif: bool = false
 var _pret_a_avancer: bool = false
+# Numéro de la frame où le dialogue a consommé le bouton "interagir".
+# Sert à empêcher un autre système de réagir au même appui (voir bloque_interaction).
+var _frame_input_consomme: int = -1
 
 func _ready() -> void:
 	layer = 10
@@ -89,6 +92,7 @@ func _process(delta: float) -> void:
 	# Bouton → avancer (dès que le délai min est passé)
 	if _pret_a_avancer:
 		if Input.is_action_just_pressed("joueur1_interagir") or Input.is_action_just_pressed("joueur2_interagir"):
+			_frame_input_consomme = Engine.get_process_frames()
 			_afficher_prochaine_ligne()
 			return
 
@@ -96,12 +100,27 @@ func _process(delta: float) -> void:
 	if _minuterie <= 0.0:
 		_afficher_prochaine_ligne()
 
+# Vrai si un dialogue est ouvert à l'écran.
+func est_actif() -> bool:
+	return _actif
+
+# Vrai si le bouton "interagir" appartient au dialogue en ce moment.
+# Les autres systèmes (InteractionManager) doivent alors l'ignorer.
+#
+# Le test sur la frame couvre un cas précis : à la toute dernière ligne, l'appui
+# ferme le dialogue et _actif repasse à false DANS LA MÊME FRAME. Sans ce test,
+# l'InteractionManager verrait un bouton "libre" et relancerait la conversation.
+func bloque_interaction() -> bool:
+	return _actif or Engine.get_process_frames() == _frame_input_consomme
+
 func afficher(nom: String, lignes: Array[String]) -> void:
 	_lignes = lignes
 	_index_ligne = 0
 	_label_nom.text = nom
 	_panneau.visible = true
 	_actif = true
+	# L'appui qui a ouvert ce dialogue ne doit rien déclencher d'autre.
+	_frame_input_consomme = Engine.get_process_frames()
 	_afficher_prochaine_ligne()
 
 func _afficher_prochaine_ligne() -> void:

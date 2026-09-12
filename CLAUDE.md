@@ -71,10 +71,13 @@ gwanur/
 │   ├── puzzles/            ← les 3 puzzles Zone 1
 │   ├── npcs/               ← pnj.gd (PNJ générique piloté par données)
 │   ├── zones/              ← zone1.gd (géométrie procédurale + orchestration)
-│   ├── globals/            ← GameManager, DialogueManager (AutoLoads)
+│   ├── globals/            ← GameManager, DialogueManager, InteractionManager (AutoLoads)
 │   ├── camera/             ← camera_follow.gd
-│   ├── ui/                 ← menu_principal.gd
+│   ├── ui/                 ← menu_principal.gd, hud_joueur.gd
 │   └── main.gd             ← câblage caméras ↔ personnages
+├── tools/
+│   ├── tests/              ← tests headless (voir l'en-tête de chaque fichier)
+│   └── *.py                ← scripts de génération/retouche d'assets
 ├── assets/
 │   ├── models/             ← modèles 3D (environnement, personnages)
 │   ├── audio/              ← musiques et sons
@@ -104,8 +107,11 @@ Ce qui existe :
 - `scenes/menu_principal.tscn` — scène de démarrage (Commencer / Quitter)
 - `docs/` — LORE, GAME_DESIGN, ART_DIRECTION, DECISIONS complets
 
+**Règle d'or pour l'input :** un seul système lit le bouton "interagir" —
+`InteractionManager`. Un nouvel objet interactif ne doit **jamais** écouter
+l'input lui-même : il s'enregistre et expose `declencher()` + `obtenir_verbe()`.
+
 Ce qui reste à faire :
-- **UI / HUD** — curseurs de moralité, indicateur d'interaction visuel
 - **Son** — au moins un thème Zone 1 + quelques SFX
 - **L'Aelith** — le modèle GLB est présent, l'interaction propre reste à écrire
 - **Polish visuel** — les blocs procéduraux de `zone1.gd` à remplacer par des assets
