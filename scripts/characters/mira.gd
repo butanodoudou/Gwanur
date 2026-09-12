@@ -3,7 +3,10 @@
 #
 #   Skill 1 (X) → Grappin de Cuivre   : accroche et interagit à distance
 #   Skill 2 (Y) → Lanterne à Mémoire  : révèle les échos du passé
-#   Interagir (A) → Sac d'Alchimiste
+#
+# Le bouton A (interagir) n'est pas géré ici : l'InteractionManager le lit et
+# appelle directement l'objet visé (PNJ, poignée, verrou).
+# Le Sac d'Alchimiste n'est pas implémenté — hors scope Zone 1.
 
 class_name Mira
 extends CharacterBase
@@ -40,7 +43,3 @@ func utiliser_grappin() -> void:
 func basculer_lanterne() -> void:
 	lanterne_allumee = not lanterne_allumee
 	lanterne_activee.emit(lanterne_allumee)
-
-func interagir() -> void:
-	# TODO : ouvrir le Sac d'Alchimiste ou examiner un mécanisme
-	pass

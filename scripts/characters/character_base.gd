@@ -1,7 +1,10 @@
 # scripts/characters/character_base.gd
 # Classe de base commune à Kael et Mira.
-# Gère le mouvement 3D, la gravité, et le système d'interaction.
+# Gère le mouvement 3D et la gravité.
 # Le mouvement est relatif à la caméra si camera_ref est assigné.
+#
+# Les interactions ne passent PAS par ici : c'est l'InteractionManager qui lit
+# le bouton et appelle l'objet visé. Voir scripts/globals/interaction_manager.gd.
 
 class_name CharacterBase
 extends CharacterBody3D
@@ -11,9 +14,6 @@ extends CharacterBody3D
 
 const GRAVITE: float = 9.8
 
-signal interaction_declenchee
-
-var _peut_interagir: bool = false
 var camera_ref = null
 
 func _ready() -> void:
@@ -22,7 +22,6 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	_appliquer_gravite(delta)
 	_deplacer()
-	_verifier_interaction()
 	move_and_slide()
 
 func _appliquer_gravite(delta: float) -> void:
@@ -61,18 +60,3 @@ func _obtenir_direction() -> Vector3:
 func _orienter_personnage(direction: Vector3) -> void:
 	var angle_cible = atan2(direction.x, direction.z)
 	rotation.y = lerp_angle(rotation.y, angle_cible, 0.15)
-
-func _verifier_interaction() -> void:
-	var prefixe = "joueur" + str(id_joueur) + "_"
-	if Input.is_action_just_pressed(prefixe + "interagir") and _peut_interagir:
-		interagir()
-		interaction_declenchee.emit()
-
-func interagir() -> void:
-	pass
-
-func entrer_zone_interaction() -> void:
-	_peut_interagir = true
-
-func quitter_zone_interaction() -> void:
-	_peut_interagir = false

@@ -3,7 +3,10 @@
 #
 #   Skill 1 (X) → Brassards de Sève  : fait pousser des lianes
 #   Skill 2 (Y) → Corne d'Appel      : attire les créatures proches
-#   Interagir (A) → Carnet des Anciens
+#
+# Le bouton A (interagir) n'est pas géré ici : l'InteractionManager le lit et
+# appelle directement l'objet visé (PNJ, poignée, verrou).
+# Le Carnet des Anciens n'est pas implémenté — hors scope Zone 1.
 
 class_name Kael
 extends CharacterBase
@@ -41,7 +44,3 @@ func utiliser_corne() -> void:
 # Retourne vrai si la position donnée est dans la portée de la Corne
 func dans_portee_corne(pos: Vector3) -> bool:
 	return global_position.distance_to(pos) <= PORTEE_CORNE
-
-func interagir() -> void:
-	# TODO : ouvrir le Carnet des Anciens ou déclencher le dialogue végétal
-	pass

@@ -55,24 +55,26 @@ func _connecter_personnages() -> void:
 	if kael:
 		kael.lianes_invoquees.connect(_sur_lianes_invoquees)
 
-func _process(_delta: float) -> void:
+# Kael a utilisé ses Brassards. On ne relit pas l'input ici : kael.gd émet déjà
+# `lianes_invoquees` quand il agit — le puzzle se contente de vérifier ses conditions.
+func _sur_lianes_invoquees(_pos: Vector3) -> void:
 	if resolu:
 		return
-
-	# Vérifie si le prérequis (parler à Brennan) est rempli
+	# Prérequis : avoir interrogé Brennan
 	if not GameManager.brennan_parle:
 		return
+	if not kael_en_zone_lianes:
+		return
 
-	# Kael essaie d'invoquer les lianes
-	if kael_en_zone_lianes and Input.is_action_just_pressed("joueur1_skill1"):
-		if mira_en_position:
-			var mira = get_tree().get_first_node_in_group("mira")
-			if mira and mira.lanterne_allumee:
-				_faire_pousser_lianes()
-			else:
-				DialogueManager.afficher("", ["Kael sent l'endroit... mais quelque chose manque."])
-		else:
-			DialogueManager.afficher("", ["Kael sent l'endroit... Mira, viens voir avec ta Lanterne !"])
+	if not mira_en_position:
+		DialogueManager.afficher("", ["Kael sent l'endroit... Mira, viens voir avec ta Lanterne !"])
+		return
+
+	var mira = get_tree().get_first_node_in_group("mira")
+	if mira and mira.lanterne_allumee:
+		_faire_pousser_lianes()
+	else:
+		DialogueManager.afficher("", ["Kael sent l'endroit... mais quelque chose manque."])
 
 func _sur_lanterne_changee(allumee: bool) -> void:
 	if not GameManager.brennan_parle:
@@ -86,10 +88,6 @@ func _sur_lanterne_changee(allumee: bool) -> void:
 		])
 	else:
 		echo_liane.visible = false
-
-func _sur_lianes_invoquees(_pos: Vector3) -> void:
-	# Ce signal est géré dans _process pour vérifier les conditions
-	pass
 
 func _faire_pousser_lianes() -> void:
 	resolu = true

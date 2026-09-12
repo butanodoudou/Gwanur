@@ -545,6 +545,32 @@ Format :
 
 ---
 
+## 2026-09-12 — Puzzles branchés sur l'UI + nettoyage du code mort
+
+### `PointInteraction` — un script pour tout élément interactif du décor
+**Décision :** Nouveau script `scripts/interaction/point_interaction.gd` (`class_name PointInteraction`, hérite d'`Area3D`), attaché aux poignées du Puzzle 1 et au verrou du Puzzle 2 dans `zone1.tscn`.
+**Raison :** Les puzzles lisaient encore le bouton A dans leur `_process`, comme les PNJ avant correction. Conséquence directe : **aucun prompt ne s'affichait devant une poignée ou un verrou** — le HUD d'interaction ne couvrait que les PNJ.
+**Impact :**
+- `verbe` et `joueur_autorise` se configurent dans l'éditeur ("Tirer la poignée gauche", réservée à Kael)
+- `definir_disponible()` permet d'allumer/éteindre un point selon l'avancement (le verrou n'apparaît que quand la grille est ouverte)
+- Plus aucun puzzle ne lit l'input d'interaction
+
+### Message d'état coopératif
+**Décision :** `GameManager.definir_etat_coop(texte)` pose un message court affiché **en haut des deux vues**, distinct de la boîte de dialogue.
+**Raison :** Sur le Puzzle 1, « Kael s'arc-boute… en attente de Mira » passait dans un dialogue et disparaissait après quelques secondes. Plus rien n'indiquait ensuite que Kael tenait sa poignée — sur le puzzle qui enseigne justement la coopération. Un joueur arrivant après ne voyait jamais le message.
+**Impact :** Le Puzzle 2 s'en sert aussi pour le compte à rebours des 12 secondes. Le message est identique dans les deux vues : les deux joueurs doivent savoir où en est la coop.
+
+### Code mort supprimé
+**Décision :** Retrait de la plomberie d'interaction inutilisée de `character_base.gd` (`_peut_interagir`, `entrer_zone_interaction`, `quitter_zone_interaction`, `_verifier_interaction`, signal `interaction_declenchee`) et des `interagir()` vides de Kael et Mira.
+**Raison :** `entrer_zone_interaction()` n'était appelé nulle part, donc `_peut_interagir` restait toujours `false` et les `interagir()` ne s'exécutaient jamais. Leurs en-têtes annonçaient « Interagir (A) → Carnet des Anciens », ce qui était faux et trompeur.
+**Impact :** Le Carnet des Anciens et le Sac d'Alchimiste restent documentés comme hors scope Zone 1, mais ne laissent plus de fausse piste dans le code.
+
+### Puzzle 3 — suppression d'une double lecture
+**Décision :** La logique passe par le signal `lianes_invoquees` de Kael au lieu de relire `joueur1_skill1` dans `_process`.
+**Raison :** Le signal était connecté à une fonction vide pendant que `_process` refaisait le travail. Deux chemins pour une seule action.
+
+---
+
 ## À décider — Zone 1
 
 - [x] Les lettres d'Aldric — lettre 1 livrée par Vaenmor
@@ -553,5 +579,5 @@ Format :
 - [ ] La musique — style, instruments (au moins un thème Zone 1)
 - [x] Le menu principal
 - [x] UI — HUD moralité + indicateur d'interaction (par joueur, dans son SubViewport)
-- [ ] UI — retour visuel sur la progression du Puzzle 1 (savoir que l'autre tient sa poignée)
+- [x] UI — retour visuel sur la progression du Puzzle 1 (message d'état coop)
 - [ ] Détails visuels de l'Aelith (le modèle GLB est là, pas d'interaction propre)

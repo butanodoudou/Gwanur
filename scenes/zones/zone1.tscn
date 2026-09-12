@@ -6,6 +6,7 @@
 [ext_resource type="Script" path="res://scripts/puzzles/puzzle_oiseau.gd" id="4_p2"]
 [ext_resource type="Script" path="res://scripts/puzzles/puzzle_roue_eau.gd" id="5_p3"]
 [ext_resource type="PackedScene" path="res://assets/models/environnement/nimbus_willow_2_tree.glb" id="6_aelith"]
+[ext_resource type="Script" path="res://scripts/interaction/point_interaction.gd" id="7_point"]
 
 ; Collision partagée par tous les PNJ (radius=2.0)
 [sub_resource type="SphereShape3D" id="ss_pnj"]
@@ -269,12 +270,18 @@ script = ExtResource("3_p1")
 
 [node name="ZoneInteractionKael" type="Area3D" parent="Puzzle1PorteDouble"]
 position = Vector3(-5.0, 0.0, -34.0)
+script = ExtResource("7_point")
+verbe = "Tirer la poignée gauche"
+joueur_autorise = 1
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Puzzle1PorteDouble/ZoneInteractionKael"]
 shape = SubResource("ss_p1_kael")
 
 [node name="ZoneInteractionMira" type="Area3D" parent="Puzzle1PorteDouble"]
 position = Vector3(5.0, 0.0, -34.0)
+script = ExtResource("7_point")
+verbe = "Tirer la poignée droite"
+joueur_autorise = 2
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Puzzle1PorteDouble/ZoneInteractionMira"]
 shape = SubResource("ss_p1_mira")
@@ -320,6 +327,9 @@ mesh = SubResource("bm_grille")
 
 [node name="ZoneVerrou" type="Area3D" parent="Puzzle2Oiseau"]
 position = Vector3(-6.0, 0.0, -32.0)
+script = ExtResource("7_point")
+verbe = "Verrouiller le passage"
+joueur_autorise = 2
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Puzzle2Oiseau/ZoneVerrou"]
 shape = SubResource("ss_p2_verrou")

@@ -72,6 +72,7 @@ gwanur/
 │   ├── npcs/               ← pnj.gd (PNJ générique piloté par données)
 │   ├── zones/              ← zone1.gd (géométrie procédurale + orchestration)
 │   ├── globals/            ← GameManager, DialogueManager, InteractionManager (AutoLoads)
+│   ├── interaction/        ← point_interaction.gd (à attacher aux Area3D du décor)
 │   ├── camera/             ← camera_follow.gd
 │   ├── ui/                 ← menu_principal.gd, hud_joueur.gd
 │   └── main.gd             ← câblage caméras ↔ personnages
@@ -109,7 +110,9 @@ Ce qui existe :
 
 **Règle d'or pour l'input :** un seul système lit le bouton "interagir" —
 `InteractionManager`. Un nouvel objet interactif ne doit **jamais** écouter
-l'input lui-même : il s'enregistre et expose `declencher()` + `obtenir_verbe()`.
+l'input lui-même. Pour un élément du décor, attache le script `PointInteraction`
+à son `Area3D` et connecte son signal `active` : tout le reste est automatique
+(prompt dans le HUD, enregistrement, désenregistrement).
 
 Ce qui reste à faire :
 - **Son** — au moins un thème Zone 1 + quelques SFX

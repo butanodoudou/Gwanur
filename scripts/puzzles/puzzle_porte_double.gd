@@ -5,60 +5,96 @@
 # et appuyer sur A. Le premier qui appuie attend l'autre (sans limite de temps).
 # Quand les deux ont appuyé, la porte monte.
 #
+# Le puzzle ne lit PAS l'input : chaque poignée est un PointInteraction qui
+# affiche son prompt dans le HUD et émet `active` quand le joueur appuie.
+#
 # Nœuds attendus dans la scène :
-#   ZoneInteractionKael  (Area3D) — zone devant la poignée de Kael
-#   ZoneInteractionMira  (Area3D) — zone devant la poignée de Mira
+#   ZoneInteractionKael  (PointInteraction) — poignée gauche, réservée à Kael
+#   ZoneInteractionMira  (PointInteraction) — poignée droite, réservée à Mira
 #   Porte                (AnimatableBody3D) — la porte qui monte
 
 extends Node3D
 
 signal puzzle_resolu
 
-@onready var zone_kael: Area3D = $ZoneInteractionKael
-@onready var zone_mira: Area3D = $ZoneInteractionMira
+@onready var zone_kael: PointInteraction = $ZoneInteractionKael
+@onready var zone_mira: PointInteraction = $ZoneInteractionMira
 @onready var porte: AnimatableBody3D = $Porte
 
-var kael_en_zone: bool = false
-var mira_en_zone: bool = false
 var kael_pret: bool = false
 var mira_prete: bool = false
 var resolu: bool = false
 
 func _ready() -> void:
-	zone_kael.body_entered.connect(func(b): if b.is_in_group("kael"): kael_en_zone = true)
+	zone_kael.active.connect(func(_id): _prendre_poignee(1))
+	zone_mira.active.connect(func(_id): _prendre_poignee(2))
+
+	# Si un joueur lâche sa poignée en s'éloignant, il n'est plus prêt —
+	# sauf si l'autre est déjà en place (on ne punit pas celui qui attend).
 	zone_kael.body_exited.connect(func(b):
-		if b.is_in_group("kael"):
-			kael_en_zone = false
-			# Si Kael s'en va avant que Mira soit prête, il n'est plus prêt non plus
-			if not mira_prete:
-				kael_pret = false
+		if b.is_in_group("kael") and not mira_prete:
+			_lacher_poignee(1)
 	)
-	zone_mira.body_entered.connect(func(b): if b.is_in_group("mira"): mira_en_zone = true)
 	zone_mira.body_exited.connect(func(b):
-		if b.is_in_group("mira"):
-			mira_en_zone = false
-			if not kael_pret:
-				mira_prete = false
+		if b.is_in_group("mira") and not kael_pret:
+			_lacher_poignee(2)
 	)
 
-func _process(_delta: float) -> void:
+func _prendre_poignee(id_joueur: int) -> void:
 	if resolu:
 		return
 
-	if kael_en_zone and not kael_pret and Input.is_action_just_pressed("joueur1_interagir"):
+	if id_joueur == 1:
+		if kael_pret:
+			return
 		kael_pret = true
-		DialogueManager.afficher("", ["Kael s'arc-boute contre la poignée... en attente de Mira."])
-
-	if mira_en_zone and not mira_prete and Input.is_action_just_pressed("joueur2_interagir"):
+		zone_kael.definir_disponible(false)
+	else:
+		if mira_prete:
+			return
 		mira_prete = true
-		DialogueManager.afficher("", ["Mira empoigne le grappin... en attente de Kael."])
+		zone_mira.definir_disponible(false)
 
 	if kael_pret and mira_prete:
 		_ouvrir_porte()
+	else:
+		_annoncer_attente()
+
+func _lacher_poignee(id_joueur: int) -> void:
+	if resolu:
+		return
+
+	if id_joueur == 1:
+		if not kael_pret:
+			return
+		kael_pret = false
+		zone_kael.definir_disponible(true)
+	else:
+		if not mira_prete:
+			return
+		mira_prete = false
+		zone_mira.definir_disponible(true)
+
+	_annoncer_attente()
+
+# Message persistant en haut des DEUX vues : chacun doit savoir que l'autre
+# l'attend. Un dialogue ne suffirait pas — il disparaît au bout de quelques
+# secondes, et le joueur qui arrive après ne le verrait jamais.
+func _annoncer_attente() -> void:
+	if kael_pret and not mira_prete:
+		GameManager.definir_etat_coop("Kael tient sa poignée — Mira, prends l'autre !")
+	elif mira_prete and not kael_pret:
+		GameManager.definir_etat_coop("Mira tient sa poignée — Kael, prends l'autre !")
+	else:
+		GameManager.definir_etat_coop("")
 
 func _ouvrir_porte() -> void:
 	resolu = true
 	GameManager.puzzle1_resolu = true
+	GameManager.definir_etat_coop("")
+	zone_kael.definir_disponible(false)
+	zone_mira.definir_disponible(false)
+
 	DialogueManager.afficher("", ["La porte grince et s'ouvre lentement..."])
 	# La porte monte de 3.5m en 1.5 secondes
 	var tween = create_tween()

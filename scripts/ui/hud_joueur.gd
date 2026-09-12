@@ -6,9 +6,11 @@
 # permet à Kael et Mira d'avoir chacun leur propre indicateur sans se marcher
 # dessus.
 #
-# Il affiche deux choses :
+# Il affiche trois choses :
 #   1. Le prompt d'interaction  — "(A) Parler à Lira", en bas, quand on est à portée
 #   2. Le curseur de moralité   — en haut à gauche, seulement quand il vient de bouger
+#   3. L'état coopératif        — en haut au centre, identique dans les deux vues
+#                                 ("Kael tient sa poignée — en attente de Mira")
 #
 # Tout est construit en code, comme le menu principal et la boîte de dialogue.
 # Il n'y a donc rien à configurer dans l'éditeur à part id_joueur.
@@ -27,6 +29,7 @@ const COULEUR_ACCENT := Color(1.0, 0.85, 0.5)
 const COULEUR_DISCRETE := Color(0.65, 0.58, 0.45)
 
 var _label_prompt: Label
+var _label_etat: Label
 var _bloc_moralite: Control
 var _rail: ColorRect
 var _curseur: ColorRect
@@ -42,9 +45,13 @@ func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 
 	_construire_prompt()
+	_construire_etat()
 	_construire_moralite()
 
 	GameManager.moralite_changee.connect(_sur_moralite_changee)
+	GameManager.etat_coop_change.connect(_sur_etat_coop_change)
+	# Le HUD peut être créé après qu'un état a déjà été posé
+	_sur_etat_coop_change(GameManager.etat_coop)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # CONSTRUCTION DE L'INTERFACE
@@ -68,6 +75,23 @@ func _construire_prompt() -> void:
 	_label_prompt.add_theme_constant_override("outline_size", 6)
 	_label_prompt.visible = false
 	add_child(_label_prompt)
+
+func _construire_etat() -> void:
+	_label_etat = Label.new()
+	_label_etat.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# En haut, centré — sous la barre de moralité, visible sans gêner le jeu
+	_label_etat.anchor_left   = 0.0
+	_label_etat.anchor_right  = 1.0
+	_label_etat.offset_top    = 90.0
+	_label_etat.offset_bottom = 126.0
+	_label_etat.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_label_etat.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_label_etat.add_theme_font_size_override("font_size", 16)
+	_label_etat.add_theme_color_override("font_color", Color(0.85, 0.92, 0.80))
+	_label_etat.add_theme_color_override("font_outline_color", Color(0.08, 0.06, 0.05))
+	_label_etat.add_theme_constant_override("outline_size", 6)
+	_label_etat.visible = false
+	add_child(_label_etat)
 
 func _construire_moralite() -> void:
 	# Conteneur transparent en haut à gauche — on fait varier SON alpha pour le fondu
@@ -161,6 +185,12 @@ func _maj_moralite(delta: float) -> void:
 		_bloc_moralite.modulate.a = 1.0
 	else:
 		_bloc_moralite.modulate.a = max(_temps_restant / DUREE_FONDU, 0.0)
+
+# L'état coop est le même dans les deux vues : les deux joueurs doivent savoir
+# où en est la coopération, pas seulement celui qui a agi.
+func _sur_etat_coop_change(texte: String) -> void:
+	_label_etat.text = texte
+	_label_etat.visible = texte != ""
 
 func _sur_moralite_changee(id: int, valeur: int) -> void:
 	# On ignore le curseur de l'autre joueur — chacun ne voit que le sien

@@ -8,10 +8,10 @@
 #   4. Verrou activé → grille reste ouverte définitivement
 #
 # Nœuds attendus :
-#   Oiseau               (Node3D)         — l'oiseau, positionné sur son perchoir au départ
-#   PlateformePoids      (Area3D)         — détecte quand l'oiseau est dessus
+#   Oiseau               (Node3D)           — l'oiseau, posé sur son perchoir au départ
+#   PlateformePoids      (Area3D)           — repère de la position d'arrivée de l'oiseau
 #   Grille               (AnimatableBody3D) — la grille qui bloque le chemin
-#   ZoneVerrou           (Area3D)         — là où Mira active le verrou
+#   ZoneVerrou           (PointInteraction) — là où Mira active le verrou
 
 extends Node3D
 
@@ -23,7 +23,7 @@ const DUREE_OUVERTURE: float = 12.0
 @onready var oiseau: Node3D = $Oiseau
 @onready var plateforme_poids: Area3D = $PlateformePoids
 @onready var grille: AnimatableBody3D = $Grille
-@onready var zone_verrou: Area3D = $ZoneVerrou
+@onready var zone_verrou: PointInteraction = $ZoneVerrou
 
 var position_perchoir: Vector3
 var position_plateforme: Vector3
@@ -34,7 +34,6 @@ var grille_ouverte: bool = false
 var verrou_active: bool = false
 var resolu: bool = false
 var _minuterie_fermeture: float = 0.0
-var _mira_au_verrou: bool = false
 
 func _ready() -> void:
 	position_perchoir = oiseau.global_position
@@ -43,14 +42,10 @@ func _ready() -> void:
 	# Connecte le signal de Kael dès que les personnages sont dans la scène
 	call_deferred("_connecter_kael")
 
-	plateforme_poids.body_entered.connect(func(b):
-		# L'oiseau est représenté par un Node3D qui n'est pas un corps physique —
-		# on vérifie la proximité dans _process à la place
-		pass
-	)
-
-	zone_verrou.body_entered.connect(func(b): if b.is_in_group("mira"): _mira_au_verrou = true)
-	zone_verrou.body_exited.connect(func(b): if b.is_in_group("mira"): _mira_au_verrou = false)
+	# Le verrou ne devient utilisable que lorsque la grille est ouverte —
+	# sinon Mira verrait "(A) Verrouiller le passage" sans que ça ait un sens.
+	zone_verrou.definir_disponible(false)
+	zone_verrou.active.connect(func(_id): _activer_verrou())
 
 func _connecter_kael() -> void:
 	var kael = get_tree().get_first_node_in_group("kael")
@@ -72,13 +67,14 @@ func _process(delta: float) -> void:
 	# Minuterie de fermeture automatique
 	if grille_ouverte and not verrou_active:
 		_minuterie_fermeture -= delta
+		_annoncer_compte_a_rebours()
 		if _minuterie_fermeture <= 0.0:
 			_fermer_grille()
 
-	# Mira active le verrou pendant que la grille est ouverte
-	if _mira_au_verrou and grille_ouverte and not verrou_active:
-		if Input.is_action_just_pressed("joueur2_interagir"):
-			_activer_verrou()
+# Les deux joueurs voient le temps qu'il reste à Mira pour atteindre le verrou.
+func _annoncer_compte_a_rebours() -> void:
+	var secondes: int = max(int(ceil(_minuterie_fermeture)), 0)
+	GameManager.definir_etat_coop("Le passage se referme dans %d s — Mira, au verrou !" % secondes)
 
 func _sur_corne_sonnee() -> void:
 	if oiseau_attire or resolu:
@@ -92,6 +88,7 @@ func _sur_corne_sonnee() -> void:
 func _ouvrir_grille() -> void:
 	grille_ouverte = true
 	_minuterie_fermeture = DUREE_OUVERTURE
+	zone_verrou.definir_disponible(true)
 	DialogueManager.afficher("", ["Le poids ouvre le passage ! Mira, dépêche-toi !"])
 	var tween = create_tween()
 	tween.tween_property(grille, "position", grille.position + Vector3(0, 3.5, 0), 1.0)
@@ -100,6 +97,8 @@ func _fermer_grille() -> void:
 	grille_ouverte = false
 	oiseau_attire = false
 	oiseau_en_place = false
+	zone_verrou.definir_disponible(false)
+	GameManager.definir_etat_coop("")
 	# L'oiseau retourne sur son perchoir
 	oiseau.global_position = position_perchoir
 	DialogueManager.afficher("", ["L'oiseau s'est envolé. Recommencez."])
@@ -107,8 +106,12 @@ func _fermer_grille() -> void:
 	tween.tween_property(grille, "position", grille.position - Vector3(0, 3.5, 0), 1.0)
 
 func _activer_verrou() -> void:
+	if verrou_active or not grille_ouverte:
+		return
 	verrou_active = true
 	resolu = true
 	GameManager.puzzle2_resolu = true
+	zone_verrou.definir_disponible(false)
+	GameManager.definir_etat_coop("")
 	DialogueManager.afficher("", ["Mira verrouille le passage. Kael peut passer."])
 	puzzle_resolu.emit()
