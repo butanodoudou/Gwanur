@@ -18,9 +18,9 @@ config/name="Gwanur"
 config/description="Local co-op exploration and puzzle game. Two half-elf twins, Kael and Mira, solve puzzles together in a medieval heroic fantasy world."
 config/version="0.1.0"
 config/tags=PackedStringArray("co-op", "puzzle", "fantasy")
-run/main_scene="res://scenes/main.tscn"
+run/main_scene="res://scenes/menu_principal.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")
-config/run/main_scene="res://scenes/main.tscn"
+config/run/main_scene="res://scenes/menu_principal.tscn"
 config/run/max_fps=60
 
 [autoload]

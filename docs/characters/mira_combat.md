@@ -10,12 +10,7 @@ Mira ne canalise pas de magie. Elle **forge des ouvertures**. Où Kael lit le co
 
 ## Identité
 
-| | |
-|---|---|
-| **Race** | Demi-elfe (héritage humain de son père Aldric) |
-| **Âge** | 16 ans — regard direct, mâchoire serrée |
-| **Rôle** | Melee agressif / perturbateur de zone |
-| **Style** | Explosif, opportuniste, sans fioritures |
+| | | ? 
 | **Arme principale** | Grappin de Cuivre (corps à corps + portée) |
 | **Arme secondaire** | Couteau utilitaire + poings |
 

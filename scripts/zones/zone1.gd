@@ -18,12 +18,15 @@ const COULEUR_BOIS     = Color(0.42, 0.28, 0.18)
 const COULEUR_PERCHOIR = Color(0.35, 0.22, 0.12)
 const COULEUR_EAU      = Color(0.25, 0.45, 0.60)
 
-@onready var puzzle1     = $Puzzle1PorteDouble
-@onready var puzzle2     = $Puzzle2Oiseau
-@onready var puzzle3     = $Puzzle3RoueEau
+@onready var puzzle1       = $Puzzle1PorteDouble
+@onready var puzzle2       = $Puzzle2Oiseau
+@onready var puzzle3       = $Puzzle3RoueEau
 @onready var zone_grimoire: Area3D = $ZoneGrimoire
+@onready var zone_stele:    Area3D = $ZoneStele
 
-var _attente_choix: bool = false
+var _attente_choix: bool  = false
+var _stele_lue: bool      = false
+var _choix_affiche: bool  = false
 
 func _ready() -> void:
 	set_process(false)
@@ -40,10 +43,9 @@ func _ready() -> void:
 # L'Aelith (le vrai modèle) est déjà instancié dans zone1.tscn.
 
 func _construire_village() -> void:
-	# ── Sol étendu ────────────────────────────────────────────────────────────
-	# Couvre tout le village doublé (rayon ~30m) + la zone nord vers Zone 2.
-	_sol(Vector3(80, 0.2, 40), Vector3( 0, -0.1, -20))  # Centre et nord
-	_sol(Vector3(80, 0.2, 30), Vector3( 0, -0.1,  20))  # Sud (entrée)
+	# ── Sol ───────────────────────────────────────────────────────────────────
+	_sol(Vector3(80, 0.2, 45), Vector3(0, -0.1, -17.5))  # centre/nord (z=-40 à z=+5)
+	_sol(Vector3(80, 0.2, 30), Vector3(0, -0.1,  20.0))  # sud / entrée (z=+5 à z=+35)
 
 	# ── Maisons ───────────────────────────────────────────────────────────────
 	# Maison de Lira (est, en face de l'Aelith)
@@ -73,6 +75,18 @@ func _construire_village() -> void:
 	_mur(Vector3(0.4, 3.0, 20.0), Vector3(-18.0, 1.5, -36.0), COULEUR_BOIS)
 	_mur(Vector3(0.4, 3.0, 20.0), Vector3( 18.0, 1.5, -36.0), COULEUR_BOIS)
 
+	# ── Collision du tronc de l'Aelith ───────────────────────────────────────
+	# Le modèle GLB n'a pas de collision native — cylindre autour du tronc (scale 6×)
+	var sb_aelith := StaticBody3D.new()
+	var cs_aelith := CollisionShape3D.new()
+	var shape_aelith := CylinderShape3D.new()
+	shape_aelith.radius = 2.0
+	shape_aelith.height = 8.0
+	cs_aelith.shape = shape_aelith
+	cs_aelith.position = Vector3(0, 4.0, 0)
+	sb_aelith.add_child(cs_aelith)
+	add_child(sb_aelith)
+
 	# ── Stèle du Pacte d'Aelric ───────────────────────────────────────────────
 	_mur(Vector3(0.5, 3.5, 0.4), Vector3(0.0, 1.75, -44.0), COULEUR_PIERRE)
 
@@ -100,6 +114,7 @@ func _connecter_puzzles() -> void:
 	puzzle3.puzzle_resolu.connect(_sur_puzzle3_resolu)
 	zone_grimoire.body_entered.connect(_sur_entree_grimoire)
 	zone_grimoire.monitoring = false
+	zone_stele.body_entered.connect(_sur_entree_stele)
 
 func _sur_puzzle1_resolu() -> void:
 	DialogueManager.afficher("", ["La porte grince... le passage est libre."])
@@ -128,26 +143,39 @@ func _sur_entree_grimoire(body: Node3D) -> void:
 # ──────────────────────────────────────────────────────────────────────────────
 
 func _declencher_grimoire() -> void:
-	DialogueManager.afficher("Grimoire d'Elara", [
-		"Un vieux grimoire, couvert de son écriture.",
-		"\"L'équilibre que je maintiens... le titre que je ne peux plus porter.\"",
-		"Vous le gardez secret entre vous ?"
+	DialogueManager.afficher("Grimoire d'Aelindra", [
+		"Un vieux grimoire caché sous les lattes. L'écriture est celle de votre mère.",
+		"\"Pour mes enfants, si jamais ils trouvent ces mots —\"",
+		"\"Je n'ai jamais eu le courage de vous dire qui j'étais vraiment.\"",
+		"\"La Tisserande. Gardienne de l'équilibre entre les peuples.",
+		"\"C'est le titre que je portais avant de choisir une vie ordinaire avec vous.\"",
+		"\"Aldric savait. Depuis le début. Il a choisi de m'aimer quand même.\"",
+		"\"Si vous lisez ceci sans moi, c'est que l'équilibre s'est rompu.\"",
+		"\"À vous de choisir maintenant ce que vous ferez de ce secret.\""
 	])
-	await get_tree().create_timer(11.0).timeout
-	DialogueManager.afficher("", [
-		"Manette 1 (A) → Garder le secret",
-		"Manette 2 (A) → Le partager avec les villageois"
-	])
+	# Attend la fin de la lecture (le joueur clique à travers toutes les lignes)
+	await DialogueManager.dialogue_fini
+	# Petit délai pour que le bouton soit relâché (évite le double-input)
+	await get_tree().create_timer(0.4).timeout
 	_attente_choix = true
 	set_process(true)
 
 func _process(_delta: float) -> void:
 	if not _attente_choix:
 		return
+	# Lire l'input en priorité (avant de re-afficher pour éviter les conflits)
 	if Input.is_action_just_pressed("joueur1_interagir"):
 		_appliquer_choix("secret")
-	elif Input.is_action_just_pressed("joueur2_interagir"):
+		return
+	if Input.is_action_just_pressed("joueur2_interagir"):
 		_appliquer_choix("partager")
+		return
+	# Re-afficher le choix dès que le panneau est fermé (loop jusqu'au choix)
+	if not DialogueManager._panneau.visible:
+		DialogueManager.afficher("", [
+			"Joueur 1 (A) → Garder le secret entre vous",
+			"Joueur 2 (A) → Le partager avec les villageois"
+		])
 
 func _appliquer_choix(choix: String) -> void:
 	_attente_choix = false
@@ -170,6 +198,24 @@ func _appliquer_choix(choix: String) -> void:
 			"Kael débloque : Mémoire des Anciens",
 			"Mira débloque : Lecture"
 		])
+
+# ──────────────────────────────────────────────────────────────────────────────
+# STÈLE DU PACTE D'AELRIC
+# ──────────────────────────────────────────────────────────────────────────────
+
+func _sur_entree_stele(body: Node3D) -> void:
+	if not body.is_in_group("joueurs"):
+		return
+	if _stele_lue:
+		return
+	_stele_lue = true
+	DialogueManager.afficher("Stèle du Pacte d'Aelric", [
+		"En l'an de la grande trêve, par la parole d'Aelindra de Vaelindra",
+		"et d'Aldric d'Arathos, ce Pacte fut scellé.",
+		"Que leurs noms unissent ce que la guerre avait séparé.",
+		"Que ceux qui passent ce seuil sachent qu'ils marchent",
+		"sur les pas d'une promesse."
+	])
 
 # ──────────────────────────────────────────────────────────────────────────────
 # HELPERS — COULEURS DES PUZZLES

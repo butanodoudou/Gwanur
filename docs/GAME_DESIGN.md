@@ -2,12 +2,14 @@
 
 ## Vision du Jeu
 
-**Gwanur** est un jeu d'exploration et de puzzles coopératif local, jouable en split-screen vertical sur PC. Inspiré de *It Takes Two* pour la mécanique coop et des RPG pour la progression de personnage. Aucun combat — uniquement des puzzles nécessitant la coordination des deux joueurs.
+**Gwanur** est un jeu de puzzles coopératif local, jouable en split-screen vertical sur PC. **Deux joueurs obligatoires.** Aucun combat — uniquement des puzzles nécessitant la coordination des deux joueurs.
+
+Le jeu couvre la **Zone 1 uniquement** (~45 minutes). L'objectif est de livrer une expérience courte, complète, et publiable.
 
 **Ambiance :** Heroic fantasy médiéval, style Studio Ghibli / Anime semi-réaliste  
-**Durée estimée :** ~10 heures  
+**Durée :** ~45 minutes  
 **Plateforme :** PC  
-**Coop :** Local, split-screen vertical (clavier/souris + manette)
+**Coop :** Local, split-screen vertical, deux manettes
 
 ---
 

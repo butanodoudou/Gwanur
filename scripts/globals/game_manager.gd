@@ -5,6 +5,7 @@
 extends Node
 
 # ── Progression Zone 1 ─────────────────────────────────────────────────────
+var vaenmor_parle: bool = false     # Joueurs ont parlé à Vaenmor (donne la lettre d'Aldric)
 var lira_parlee: bool = false       # Joueurs ont parlé à Lira
 var brennan_parle: bool = false     # Joueurs ont parlé à Brennan
 

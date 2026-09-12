@@ -80,20 +80,28 @@ gwanur/
 
 ## État Actuel du Projet
 
-**Phase :** Initialisation — scaffold posé, documentation complète, aucun script encore écrit.
+**Phase :** Zone 1 en cours — scripts de base fonctionnels, puzzles codés, polish et PNJ à finir.
+
+**Scope :** Gwanur est un jeu **court et complet** — Zone 1 uniquement (~45 min). Deux joueurs obligatoires. Zéro combat. L'objectif est de **finir et publier**, puis recommencer un nouveau projet.
 
 Ce qui existe :
-- `scenes/main.tscn` — scène principale vide (Node2D)
+- `scripts/characters/character_base.gd` — mouvement, gravité, interactions
+- `scripts/characters/kael.gd` + `mira.gd` — skills puzzle (brassards, corne, grappin, lanterne)
+- `scripts/puzzles/` — les 3 puzzles Zone 1 codés (porte double, oiseau, roue d'eau)
+- `scripts/globals/` — GameManager + DialogueManager (AutoLoads)
+- `scripts/zones/zone1.gd` — géométrie procédurale Zone 1
+- `scenes/zones/zone1.tscn` — scène Zone 1
 - `docs/` — LORE, GAME_DESIGN, ART_DIRECTION, DECISIONS complets
-- `project.godot` — configuré (nom, résolution, scène principale, fps)
 
 Ce qui reste à faire :
-- Scènes et scripts des personnages (Kael, Mira)
-- Input map (Joueur 1 clavier, Joueur 2 manette)
-- Système de split-screen
-- Premier puzzle de la Zone 1
+- PNJ avec dialogues (Vaenmor, Lira, Brennan)
+- L'Aelith (l'arbre central) en décor + interaction
+- Le grimoire d'Aelindra + choix de fin de zone
+- La stèle du Pacte d'Aelric
+- Split-screen (à restaurer — avait été retiré lors d'un pivot abandonné)
+- Polish visuel et sonore
 
-Consulte `docs/DECISIONS.md` pour le détail des décisions prises.
+Consulte `docs/DECISIONS.md` pour le détail de toutes les décisions prises.
 
 ---
 

@@ -593,16 +593,91 @@ Format :
 
 ---
 
-## À décider
+## 2026-05-03 — Inspiration combat : Fable 1
 
-- [ ] Les lettres d'Aldric — contenu de chacune des 5 lettres
-- [ ] L'antagoniste Zone 3 — nom, backstory détaillé, dialogues
-- [ ] La mécanique exacte du Lac des Reflets
-- [ ] Le grand choix final Zone 5
-- [ ] Les PNJ des Zones 2, 3, 4 et 5
-- [ ] Le nom du village de Sylvara
-- [ ] La musique — compositeur, style, instruments
-- [ ] Le menu principal et l'UI
-- [ ] Types d'ennemis par zone
-- [ ] Système de stats (HP, mana, stamina, XP)
-- [ ] Arbre de compétences combat (distinct des skills narratifs)
+### Fable 1 comme référence principale du combat
+**Décision :** Le système de combat s'inspire principalement de **Fable 1** (2004) pour la structure et le ressenti, en complément de Fable 2 pour le coop.
+**Raison :** Fable 1 propose un combat temps réel lisible, satisfaisant et accessible — 3 boutons clairs, attaques chargées, lock-on automatique. Le public cible (couples avec un non-gamer) en bénéficie directement. Les 3 écoles de Fable (Strength / Skill / Will) mappent naturellement sur Kael et Mira.
+**Impact :**
+- Kael = école **Will** : sorts de nature (lianes, vent, lumière), corps-à-corps faible
+- Mira = écoles **Strength + Skill** : mêlée lourde + grappin offensif/bombes
+- Attaques chargées (maintenir le bouton), lock-on automatique (LT), combo multiplier XP
+- XP séparé par discipline (comme Fable 1) — Kael monte sa Will, Mira monte Strength et Skill indépendamment
+
+---
+
+### L'équilibre Fable 1 / ambiance Ghibli
+**Décision :** Le combat doit rester satisfaisant sans jamais être violent ou stressant. Pas de mort brutale, pas de gore.
+**Raison :** L'ADN du jeu est Ghibli — doux, poétique. Le combat doit s'intégrer à cette ambiance, pas la trahir.
+**Impact :**
+- Ennemis vaincus : disparaissent dans la lumière ou se dissolvent dans la nature (pas de corps)
+- HP à 0 : le personnage tombe mais peut être relevé par son compagnon (co-revive, 5s de fenêtre)
+- Lock-on activé par défaut (accessible) — les non-gamers n'ont pas à viser
+- Pas de one-shot : les ennemis étourdissent, knockback, jamais de dégâts absurdes
+
+---
+
+## 2026-05-03 — Repivot : retour au puzzle coop, scope Zone 1 uniquement
+
+### Décision finale de scope
+**Décision :** Gwanur redevient un **jeu de puzzles coop local, deux joueurs obligatoires**. Zéro combat. Scope réduit à la **Zone 1 uniquement** (~45 min), finie et publiable.
+**Raison :** L'objectif est de **finir un jeu complet**. Le scope RPG/combat était trop large pour un premier projet solo. Le lore, les personnages, et le design Zone 1 sont déjà solides — on les exploite jusqu'au bout.
+**Impact :**
+- Le système de combat (Fable 1) est abandonné pour ce jeu — documenté en DECISIONS pour le prochain projet
+- Le drop-in/drop-out coop est abandonné — deux joueurs obligatoires dès le départ
+- L'IA compagnon est abandonnée
+- Les zones 2 à 5 passent en "vision future" — non développées maintenant
+
+---
+
+### Caméra — retour au split-screen
+**Décision :** On revient au **split-screen vertical** (deux SubViewports, `own_world_3d = false`), qui était l'approche originale avant le pivot RPG.
+**Raison :** Deux joueurs obligatoires = split-screen naturel. Cohérent avec le design puzzle coop.
+**Impact :** Restaurer la configuration split-screen dans `main.tscn`. La caméra orbitale partagée (pivot RPG) est abandonnée.
+
+---
+
+---
+
+## 2026-05-24 — Finition Zone 1
+
+### Nom de la mère — "Aelindra" partout
+**Décision :** "Elara" (erreur de cohérence) corrigé en "Aelindra" dans tous les fichiers.
+**Impact :** Dialogues de Lira, Brennan et le grimoire sont maintenant cohérents avec le lore.
+
+### PNJ de bruit — 6 villageois ajoutés
+**Décision :** Marnen, Soraï, Eldwen, Tovan, Nyssil, Caeryn — placés autour des maisons.
+**Raison :** Village vivant. Vaenmor isolé parmi 3 PNJ était trop évident.
+**Impact :** Caeryn hint le Puzzle 1 ("deux cœurs bien accordés"), Soraï observe l'Aelith changer, Nyssil humanise le contexte géopolitique.
+
+### Stèle du Pacte d'Aelric — interactive
+**Décision :** ZoneStele Area3D déclenche l'inscription une seule fois à l'approche.
+**Raison :** Premier indice explicite que "Aelric" = Aelindra + Aldric.
+**Impact :** Handler dans zone1.gd avec flag `_stele_lue`.
+
+### DialogueManager — avance sur bouton + signal dialogue_fini
+**Décision :** Avance sur joueur1_interagir ou joueur2_interagir. DELAI_MIN=0.6s, DELAI_AUTO=5s. Signal `dialogue_fini` émis à la fermeture.
+**Raison :** L'auto-avance à 3.5s retirait le contrôle au joueur.
+**Impact :** Universel sur tous les dialogues du jeu.
+
+### Lettre d'Aldric — livrée par Vaenmor
+**Décision :** Vaenmor livre la lettre 1 dans sa conversation (14 lignes). Aldric savait, a choisi d'aimer quand même.
+**Raison :** Naturel — Vaenmor dit "Elle m'a demandé de vous guetter".
+
+### Grimoire d'Aelindra — contenu enrichi
+**Décision :** 8 lignes. Aelindra nomme son titre, confirme qu'Aldric savait, pose le choix moral.
+**Impact :** Flow : grimoire → await dialogue_fini → 0.4s cooldown → loop choix jusqu'à input.
+
+### Menu principal
+**Décision :** menu_principal.tscn + scripts/ui/menu_principal.gd. Boutons Commencer/Quitter. Scène de démarrage changée.
+**Impact :** Le jeu démarre sur le menu, pas directement sur Zone 1.
+
+## À décider — Zone 1
+
+- [x] Les lettres d'Aldric — lettre 1 livrée par Vaenmor
+- [x] Dialogues de Vaenmor, Lira, Brennan
+- [x] Le contenu exact du grimoire d'Aelindra
+- [ ] La musique — style, instruments (au moins un thème Zone 1)
+- [x] Le menu principal
+- [ ] UI — HUD moralité, indicateur d'interaction visuel
+- [ ] Détails visuels de l'Aelith (le modèle GLB est là, pas d'interaction propre)
