@@ -163,13 +163,16 @@ Certains PNJ réagissent différemment à chaque jumeau dans la même conversati
 
 ## Structure des Zones
 
-| Zone | Lieu | Durée | Mécanique clé |
+**Seule la Zone 1 est développée** (~45 min). Les zones 2 à 5 restent documentées
+comme vision future — elles ne font pas partie du jeu à livrer.
+
+| Zone | Lieu | Statut | Mécanique clé |
 |---|---|---|---|
-| 1 | Village des Lisières | 1h30 | Introduction, puzzles simples |
-| 2 | Forêt Entrelacée | 2h | Nature et lumière |
-| 3 | Ruines de l'Entre-Deux | 2h30 | Mécanique et échos du passé |
-| 4 | Lac des Reflets | 2h | Dualité et reflets |
-| 5 | Cœur des Terres Grises | 2h | Choix final |
+| 1 | Village des Lisières | ✅ **à livrer** (~45 min) | Introduction, puzzles simples |
+| 2 | Forêt Entrelacée | 💭 vision future | Nature et lumière |
+| 3 | Ruines de l'Entre-Deux | 💭 vision future | Mécanique et échos du passé |
+| 4 | Lac des Reflets | 💭 vision future | Dualité et reflets |
+| 5 | Cœur des Terres Grises | 💭 vision future | Choix final |
 
 ---
 
@@ -256,6 +259,9 @@ Mira tient sa Lanterne allumée → l'écho de la liane devient visible → Kael
 ---
 
 ## Zone 2 — La Forêt Entrelacée
+
+> 💭 **Vision future — hors scope.** Zone non développée. Conservé parce que le
+> design est bon et qu'il servira si le jeu trouve son public.
 
 ### L'identité de la zone
 

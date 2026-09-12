@@ -1,5 +1,11 @@
 # 🔥 Mira — Frappeur de Cuivre
 
+> 🗄️ **ARCHIVE — design non implémenté.**
+> Ce document vient du pivot « RPG solo avec combats » (2026-05-02), abandonné
+> dès le 2026-05-03. **Gwanur ne contient aucun combat.** Rien ici n'est du
+> design actif : c'est de la matière conservée pour un futur projet.
+> Le design réel de Mira est dans `docs/GAME_DESIGN.md`.
+
 ## Concept
 
 Mira ne canalise pas de magie. Elle **forge des ouvertures**. Où Kael lit le combat et tisse avec précision, Mira l'absorbe et l'improvise. Son grappin, ses bombes, ses poings — ce ne sont pas des extensions de sa nature. Ce sont des outils. Et Mira sait utiliser ses outils.
@@ -10,7 +16,8 @@ Mira ne canalise pas de magie. Elle **forge des ouvertures**. Où Kael lit le co
 
 ## Identité
 
-| | | ? 
+| | |
+|---|---|
 | **Arme principale** | Grappin de Cuivre (corps à corps + portée) |
 | **Arme secondaire** | Couteau utilitaire + poings |
 

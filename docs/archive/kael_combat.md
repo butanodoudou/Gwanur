@@ -1,5 +1,11 @@
 # ⚔️ Kael — Lame de Sève
 
+> 🗄️ **ARCHIVE — design non implémenté.**
+> Ce document vient du pivot « RPG solo avec combats » (2026-05-02), abandonné
+> dès le 2026-05-03. **Gwanur ne contient aucun combat.** Rien ici n'est du
+> design actif : c'est de la matière conservée pour un futur projet.
+> Le design réel de Kael est dans `docs/GAME_DESIGN.md`.
+
 ## Concept
 
 Kael ne lance pas de sorts. Il **tisse la magie de la nature directement dans ses coups**.

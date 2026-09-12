@@ -52,56 +52,67 @@ Deux joueurs, deux personnages, aucun combat. Uniquement de l'exploration et des
 ### 📁 Organisation des fichiers
 ```
 gwanur/
-├── CLAUDE.md              ← ce fichier
+├── CLAUDE.md               ← ce fichier
 ├── docs/
-│   ├── LORE.md            ← histoire, personnages, monde
-│   ├── GAME_DESIGN.md     ← mécaniques, skills, moralité
-│   ├── ART_DIRECTION.md   ← style visuel, palettes, pipeline
-│   └── DECISIONS.md       ← toutes les décisions prises
+│   ├── LORE.md             ← histoire, personnages, monde
+│   ├── GAME_DESIGN.md      ← mécaniques, skills, moralité
+│   ├── ART_DIRECTION.md    ← style visuel, palettes, pipeline
+│   ├── DECISIONS.md        ← toutes les décisions prises
+│   └── archive/            ← designs abandonnés (pivot RPG) — NE PAS implémenter
 ├── scenes/
-│   ├── characters/        ← Kael, Mira
-│   ├── zones/             ← les 5 zones
-│   ├── ui/                ← HUD, menus, split-screen
-│   └── main.tscn          ← scène principale
+│   ├── characters/         ← kael.tscn, mira.tscn
+│   ├── zones/              ← zone1.tscn
+│   ├── ui/                 ← HUD (à venir)
+│   ├── main.tscn           ← scène de jeu (split-screen)
+│   ├── menu_principal.tscn ← scène de démarrage
+│   └── test_mecanique.tscn ← banc de test : sol plat, Kael + Mira, pas de puzzles
 ├── scripts/
-│   ├── characters/        ← logique des personnages
-│   ├── puzzles/           ← systèmes de puzzles
-│   ├── skills/            ← arbres de compétences
-│   └── morality/          ← système de moralité
+│   ├── characters/         ← character_base.gd, kael.gd, mira.gd
+│   ├── puzzles/            ← les 3 puzzles Zone 1
+│   ├── npcs/               ← pnj.gd (PNJ générique piloté par données)
+│   ├── zones/              ← zone1.gd (géométrie procédurale + orchestration)
+│   ├── globals/            ← GameManager, DialogueManager (AutoLoads)
+│   ├── camera/             ← camera_follow.gd
+│   ├── ui/                 ← menu_principal.gd
+│   └── main.gd             ← câblage caméras ↔ personnages
 ├── assets/
-│   ├── models/            ← modèles 3D Kael & Mira
-│   ├── textures/          ← textures et matériaux
-│   ├── audio/             ← musiques et sons
-│   └── fonts/             ← polices UI
+│   ├── models/             ← modèles 3D (environnement, personnages)
+│   ├── audio/              ← musiques et sons
+│   └── fonts/              ← polices UI
 └── README.md
 ```
+
+> Pas de dossier `skills/` ni `morality/` : la moralité est portée par
+> `GameManager` (deux curseurs + la progression Zone 1), et les arbres de
+> compétences ne sont pas implémentés — hors scope Zone 1.
 
 ---
 
 ## État Actuel du Projet
 
-**Phase :** Zone 1 en cours — scripts de base fonctionnels, puzzles codés, polish et PNJ à finir.
+**Phase :** Zone 1 jouable de bout en bout — il reste le polish (UI, son, visuel).
 
 **Scope :** Gwanur est un jeu **court et complet** — Zone 1 uniquement (~45 min). Deux joueurs obligatoires. Zéro combat. L'objectif est de **finir et publier**, puis recommencer un nouveau projet.
 
 Ce qui existe :
-- `scripts/characters/character_base.gd` — mouvement, gravité, interactions
-- `scripts/characters/kael.gd` + `mira.gd` — skills puzzle (brassards, corne, grappin, lanterne)
-- `scripts/puzzles/` — les 3 puzzles Zone 1 codés (porte double, oiseau, roue d'eau)
-- `scripts/globals/` — GameManager + DialogueManager (AutoLoads)
-- `scripts/zones/zone1.gd` — géométrie procédurale Zone 1
-- `scenes/zones/zone1.tscn` — scène Zone 1
+- `scripts/characters/` — `character_base.gd` (mouvement, gravité, interactions) + `kael.gd` / `mira.gd` (brassards, corne, grappin, lanterne)
+- `scripts/puzzles/` — les 3 puzzles Zone 1 (porte double, oiseau, roue d'eau)
+- `scripts/npcs/pnj.gd` — Vaenmor, Lira, Brennan + les 6 villageois de bruit
+- `scripts/globals/` — GameManager (moralité, progression) + DialogueManager (AutoLoads)
+- `scripts/zones/zone1.gd` — géométrie procédurale + stèle du Pacte + grimoire et choix de fin de zone
+- `scenes/main.tscn` — split-screen vertical opérationnel
+- `scenes/menu_principal.tscn` — scène de démarrage (Commencer / Quitter)
 - `docs/` — LORE, GAME_DESIGN, ART_DIRECTION, DECISIONS complets
 
 Ce qui reste à faire :
-- PNJ avec dialogues (Vaenmor, Lira, Brennan)
-- L'Aelith (l'arbre central) en décor + interaction
-- Le grimoire d'Aelindra + choix de fin de zone
-- La stèle du Pacte d'Aelric
-- Split-screen (à restaurer — avait été retiré lors d'un pivot abandonné)
-- Polish visuel et sonore
+- **UI / HUD** — curseurs de moralité, indicateur d'interaction visuel
+- **Son** — au moins un thème Zone 1 + quelques SFX
+- **L'Aelith** — le modèle GLB est présent, l'interaction propre reste à écrire
+- **Polish visuel** — les blocs procéduraux de `zone1.gd` à remplacer par des assets
+- Passe de playtest à deux manettes
 
 Consulte `docs/DECISIONS.md` pour le détail de toutes les décisions prises.
+⚠️ `docs/archive/` contient des designs **abandonnés** (combat, RPG solo) — ne jamais s'en servir comme référence.
 
 ---
 
