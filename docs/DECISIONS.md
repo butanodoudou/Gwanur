@@ -571,6 +571,88 @@ Format :
 
 ---
 
+## 2026-09-19 — Habillage du village (décor Zone 1)
+
+### Un fichier séparé pour le décor
+**Décision :** Tout le décor visuel vit dans `scripts/zones/decor_village.gd` (`class_name DecorVillage`), instancié par `zone1.gd` juste après la géométrie de base.
+**Alternative écartée :** continuer à empiler les `_mur()` / `_maison()` dans `zone1.gd`, qui portait déjà la géométrie, les puzzles et le grimoire.
+**Raison :** Le décor est purement cosmétique et va beaucoup bouger pendant le polish. Le sortir permet de le relire, de le retoucher ou de le couper (une ligne dans `_habiller_le_village()`) sans jamais risquer la logique de la zone.
+**Impact :**
+- La liste des maisons vit maintenant dans `zone1.gd` (`const MAISONS`) : une seule source de vérité, utilisée pour bâtir les murs ET pour poser les toits.
+- Contenu : toits en prisme + façades (portes, fenêtres éclairées, colombages), chemins de dalles, terre battue, ~150 arbres, herbe, fleurs, rochers, puits habillé, tonneaux, caisses, bottes de foin, charrette, étal de marché, corde à linge, potager, clôtures, 6 lanternes.
+
+### Le décor n'a (presque) pas de collision
+**Décision :** Tout le décor est en `MeshInstance3D` nu. Seuls les troncs d'arbres reçoivent un `StaticBody3D`.
+**Raison :** Le plaisir actuel du jeu vient de la liberté de déplacement. Une centaine de petits obstacles invisibles (caisses, fleurs, dalles) transformerait la balade en parcours d'accrochage.
+
+### Emplacements interdits
+**Décision :** `_emplacement_libre()` refuse tout objet aléatoire sur la rue principale, le pied de l'Aelith, les maisons, la palissade, le passage de la porte nord et **toute la zone du Puzzle 3** (x de -40 à -8, z de -42 à -14).
+**Raison :** Un arbre planté devant la roue à eau ou les lianes cacherait une pièce de puzzle. Le décor ne doit jamais coûter en lisibilité.
+**Note :** La graine aléatoire est fixe (`GRAINE = 20260919`) — le village est identique à chaque lancement, donc testable.
+
+### Sol en prairie plutôt qu'en terre
+**Décision :** `COULEUR_SOL` passe de beige-sable à vert prairie ; le décor repose des plaques de terre battue là où le village vit (place, devant des maisons).
+**Raison :** Un sol sable uniforme donnait un rendu désertique, à l'opposé du ton Ghibli de `ART_DIRECTION.md`. L'inverse (vert partout + usure là où l'on marche) lit tout de suite comme un village habité.
+
+### Sol agrandi + brouillard de distance
+**Décision :** Une seule dalle de sol (110 × 105) au lieu de trois, et `fog_enabled` dans l'`Environment` de `main.tscn` (densité 0.0022).
+**Raison :** L'ancien sol s'arrêtait à z=-40 : **la stèle du Pacte (z=-44) et la ZoneGrimoire (z=-40) flottaient au-dessus du vide**. La dalle élargie laisse en plus la place à la forêt qui ferme l'horizon, et le brouillard léger adoucit le bord de la carte.
+
+### La vieille maison du nord existe enfin
+**Décision :** Une ruine en pierre est bâtie autour de la `ZoneGrimoire` (8, 0, -40).
+**Raison :** Le dialogue de fin de zone annonce « quelque chose brille dans la vieille maison au nord » alors qu'il n'y avait rien à cet endroit. Les joueurs cherchaient un bâtiment inexistant.
+
+### Outil de capture
+**Décision :** `tools/capture_zone1.tscn` photographie la zone sous plusieurs angles sans lancer le jeu (`godot --path . res://tools/capture_zone1.tscn`). Sorties dans `tools/captures/`, ignoré par git.
+**Raison :** Juger un décor demande de le voir. Se déplacer à la manette jusqu'au nord de la carte à chaque retouche est trop lent.
+
+---
+
+## 2026-09-19 — Test : modéliser les bâtiments dans Blender
+
+### Blender scripté, pas Blender à la souris
+**Décision (test concluant) :** Les bâtiments sont générés par un script Python exécuté par Blender en ligne de commande — `blender --background --python tools/gen_maison.py` → `assets/models/environnement/maison_a.glb`, `maison_b.glb`, `moulin.glb`.
+**Alternative écartée :** modéliser à la main dans l'interface de Blender.
+**Raison :** Même pipeline que `gen_aelith.py`, déjà en place. Un paramètre à changer (largeur, teinte du toit, nombre de rangs de bardeaux) = une ligne, et les trois bâtiments se régénèrent en 3 secondes. Le fichier de génération est versionné et relisible ; un `.blend` ne l'est pas.
+**Coût mesuré :** 5 200 faces pour une maison, 6 400 pour le moulin — négligeable, même en écran splitté.
+
+### Ce qui fait vraiment la différence
+Constat du test, par ordre d'impact :
+1. **Les arêtes biseautées.** Un cube parfait n'a aucun liseré de lumière sur ses arêtes, d'où l'aspect « bloc ». 2 cm de biseau suffisent.
+2. **La silhouette** — débord de toit, cheminée, auvent, soubassement : des décrochements lisibles de loin.
+3. **L'irrégularité** — chaque poutre tournée d'un ou deux degrés au hasard (paramètre `tordu`).
+4. **Le toit en rangs de bardeaux** plutôt qu'une pente lisse.
+Le nombre de polygones n'est nulle part dans cette liste. On reste en Ghibli stylisé, pas en photoréalisme, qui jurerait avec les personnages et `ART_DIRECTION.md`.
+
+### Deux pièges rencontrés (à ne pas réapprendre)
+- **Espace colorimétrique.** Blender attend du **linéaire**, Godot affiche du **sRGB**, et le glTF transporte la valeur telle quelle. Sans conversion, toutes les couleurs ressortent délavées (0.55 linéaire ≈ 0.76 à l'écran). D'où `vers_lineaire()` dans `gen_maison.py`.
+- **Cache d'import.** Regénérer un `.glb` ne suffit pas : Godot sert la version en cache dans `.godot/`. Il faut `godot --headless --path . --import` avant de relancer.
+
+### Pas de roue à aubes sur le moulin
+**Décision :** Le moulin reçoit une potence de grenier (poutre, poulie, sac), pas une roue.
+**Raison :** Il est à (-22, -12), loin du ruisseau, et le Puzzle 3 a déjà sa roue à trente mètres. Deux roues dans le champ brouilleraient la lecture du puzzle.
+
+---
+
+## 2026-09-19 — Les maisons Blender sont en jeu
+
+### Collision et modèle sont séparés
+**Décision :** `zone1.gd` pose une **boîte de collision invisible** pour chaque maison ; `DecorVillage` instancie le **modèle .glb** par-dessus. Le joueur se cogne toujours à la boîte, jamais au modèle.
+**Alternative écartée :** générer la collision depuis le maillage du .glb (`-col` / trimesh à l'import).
+**Raison :** Une collision trimesh sur un modèle à 5 000 faces est coûteuse et imprévisible (on s'accroche dans un avant-toit, dans une marche). Une boîte reste lisible et gratuite. La boîte couvre les **murs seulement** : on passe donc sous le débord de toit, ce qui est le comportement attendu.
+**Impact :** `MODELES` (l'emprise des murs de chaque modèle) et `MAISONS` (modèle, position au sol, rotation, échelle) en haut de `zone1.gd`. `emprise()` est la seule source de vérité pour la taille, partagée avec le décor.
+
+### Trois modèles pour sept maisons
+**Décision :** `maison_a`, `maison_b`, `moulin`, répétés avec des rotations et des échelles différentes (0.90 à 1.15).
+**Raison :** Sept fichiers pour sept maisons, c'est sept fois plus d'assets à regénérer pour le moindre changement de style. La rotation et l'échelle suffisent à casser la répétition, et l'échelle est **uniforme** — une échelle non uniforme déformerait les poutres.
+**Exception :** la maison de l'oiseau (22, -6) reste à `rot = 0`. Le perchoir du Puzzle 2 est calé sur son faîtage ; la tourner décalerait le perchoir de la ligne de faîte.
+
+### Le perchoir et l'oiseau ont été remontés
+**Décision :** Perchoir à y = 7.25, oiseau à y = 7.78 (contre 6.2 et 5.0 avant).
+**Raison :** Le modèle monte à ~7.0 m (murs 4.57 + toit 2.46) contre 6.2 m pour l'ancienne boîte. **L'oiseau était déjà enfoui dans l'ancien toit** à y = 5.0 — le bug préexistait, il est corrigé au passage. `puzzle_oiseau.gd` lit la position de départ dans la scène, il n'y avait donc rien à changer côté code.
+
+---
+
 ## À décider — Zone 1
 
 - [x] Les lettres d'Aldric — lettre 1 livrée par Vaenmor

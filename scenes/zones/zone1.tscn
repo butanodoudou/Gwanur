@@ -304,7 +304,7 @@ mesh = SubResource("bm_porte")
 script = ExtResource("4_p2")
 
 [node name="Oiseau" type="Node3D" parent="Puzzle2Oiseau"]
-position = Vector3(22.0, 5.0, -6.0)
+position = Vector3(22.0, 7.78, -3.2)
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Puzzle2Oiseau/Oiseau"]
 mesh = SubResource("sm_oiseau")

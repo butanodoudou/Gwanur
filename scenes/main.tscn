@@ -5,7 +5,7 @@
 [ext_resource type="PackedScene" path="res://scenes/characters/mira.tscn" id="3_mira"]
 [ext_resource type="PackedScene" path="res://scenes/zones/zone1.tscn" id="4_zone1"]
 [ext_resource type="Script" uid="uid://cbebjacu4dqp3" path="res://scripts/camera/camera_follow.gd" id="5_camera"]
-[ext_resource type="Script" path="res://scripts/ui/hud_joueur.gd" id="6_hud"]
+[ext_resource type="Script" uid="uid://csihh5dniiyeg" path="res://scripts/ui/hud_joueur.gd" id="6_hud"]
 
 [sub_resource type="ProceduralSkyMaterial" id="Sky_001"]
 
@@ -17,6 +17,10 @@ background_mode = 2
 sky = SubResource("SkyRes_001")
 ambient_light_source = 3
 ambient_light_energy = 0.5
+fog_enabled = true
+fog_light_color = Color(0.807843, 0.85098, 0.878431, 1)
+fog_density = 0.0022
+fog_sky_affect = 0.2
 
 [node name="Main" type="Node3D" unique_id=1086606185]
 script = ExtResource("1_main")
@@ -39,7 +43,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 1, 5)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 5)
 
 [node name="Zone1" parent="Monde" unique_id=405955089 instance=ExtResource("4_zone1")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.1037521, -3.8193731, 4.330036)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8302517, -3.8226004, 4.2650747)
 
 [node name="SplitScreen" type="CanvasLayer" parent="." unique_id=1852997581]
 
@@ -63,11 +67,14 @@ render_target_update_mode = 4
 [node name="CameraKael" type="Camera3D" parent="SplitScreen/Conteneur/VueKael/SubViewport" unique_id=1930009376]
 script = ExtResource("5_camera")
 
-[node name="HudKael" type="Control" parent="SplitScreen/Conteneur/VueKael/SubViewport"]
+[node name="HudKael" type="Control" parent="SplitScreen/Conteneur/VueKael/SubViewport" unique_id=2020650509]
+layout_mode = 3
+anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 script = ExtResource("6_hud")
-id_joueur = 1
 
 [node name="VueMira" type="SubViewportContainer" parent="SplitScreen/Conteneur" unique_id=1082441846]
 layout_mode = 2
@@ -83,9 +90,13 @@ render_target_update_mode = 4
 script = ExtResource("5_camera")
 id_joueur = 2
 
-[node name="HudMira" type="Control" parent="SplitScreen/Conteneur/VueMira/SubViewport"]
+[node name="HudMira" type="Control" parent="SplitScreen/Conteneur/VueMira/SubViewport" unique_id=342226419]
+layout_mode = 3
+anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 script = ExtResource("6_hud")
 id_joueur = 2
 

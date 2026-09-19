@@ -70,7 +70,7 @@ gwanur/
 │   ├── characters/         ← character_base.gd, kael.gd, mira.gd
 │   ├── puzzles/            ← les 3 puzzles Zone 1
 │   ├── npcs/               ← pnj.gd (PNJ générique piloté par données)
-│   ├── zones/              ← zone1.gd (géométrie procédurale + orchestration)
+│   ├── zones/              ← zone1.gd (géométrie + orchestration) + decor_village.gd
 │   ├── globals/            ← GameManager, DialogueManager, InteractionManager (AutoLoads)
 │   ├── interaction/        ← point_interaction.gd (à attacher aux Area3D du décor)
 │   ├── camera/             ← camera_follow.gd
@@ -78,6 +78,9 @@ gwanur/
 │   └── main.gd             ← câblage caméras ↔ personnages
 ├── tools/
 │   ├── tests/              ← tests headless (voir l'en-tête de chaque fichier)
+│   ├── capture_zone1.tscn  ← photographie la zone sous plusieurs angles
+│   ├── compare_maison.tscn ← compare un asset Blender à son équivalent procédural
+│   ├── gen_maison.py       ← génère maison_a / maison_b / moulin (.glb)
 │   └── *.py                ← scripts de génération/retouche d'assets
 ├── assets/
 │   ├── models/             ← modèles 3D (environnement, personnages)
@@ -104,6 +107,8 @@ Ce qui existe :
 - `scripts/npcs/pnj.gd` — Vaenmor, Lira, Brennan + les 6 villageois de bruit
 - `scripts/globals/` — GameManager (moralité, progression) + DialogueManager (AutoLoads)
 - `scripts/zones/zone1.gd` — géométrie procédurale + stèle du Pacte + grimoire et choix de fin de zone
+- `scripts/zones/decor_village.gd` — décor du village (maisons .glb, forêt, chemins, props, lanternes) — sans collision, sauf les troncs
+- `assets/models/environnement/` — `maison_a`, `maison_b`, `moulin` (générés par `tools/gen_maison.py`) + l'Aelith
 - `scenes/main.tscn` — split-screen vertical opérationnel
 - `scenes/menu_principal.tscn` — scène de démarrage (Commencer / Quitter)
 - `docs/` — LORE, GAME_DESIGN, ART_DIRECTION, DECISIONS complets
@@ -117,7 +122,7 @@ l'input lui-même. Pour un élément du décor, attache le script `PointInteract
 Ce qui reste à faire :
 - **Son** — au moins un thème Zone 1 + quelques SFX
 - **L'Aelith** — le modèle GLB est présent, l'interaction propre reste à écrire
-- **Polish visuel** — les blocs procéduraux de `zone1.gd` à remplacer par des assets
+- **Polish visuel** — les maisons sont modélisées ; restent les props (puits, tonneaux, charrette, clôtures) et les arbres, encore en boîtes procédurales
 - Passe de playtest à deux manettes
 
 Consulte `docs/DECISIONS.md` pour le détail de toutes les décisions prises.

@@ -33,3 +33,6 @@ desktop.ini
 
 # Claude Code
 .claude/
+
+# Captures de dev (tools/capture_zone1.tscn)
+tools/captures/

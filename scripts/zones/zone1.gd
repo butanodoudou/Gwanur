@@ -12,11 +12,51 @@
 
 extends Node3D
 
-const COULEUR_SOL      = Color(0.55, 0.45, 0.30)
+const COULEUR_SOL      = Color(0.36, 0.48, 0.28)  # prairie — la terre battue est posée par le décor
 const COULEUR_PIERRE   = Color(0.72, 0.63, 0.50)
 const COULEUR_BOIS     = Color(0.42, 0.28, 0.18)
 const COULEUR_PERCHOIR = Color(0.35, 0.22, 0.12)
 const COULEUR_EAU      = Color(0.25, 0.45, 0.60)
+
+# Le décor (toits, arbres, props…) vit dans son propre fichier.
+const DecorVillage = preload("res://scripts/zones/decor_village.gd")
+
+# ── Les bâtiments ─────────────────────────────────────────────────────────────
+#
+# Les maisons sont des modèles Blender (voir `tools/gen_maison.py`).
+# RÉPARTITION DU TRAVAIL :
+#   - `zone1.gd` pose la COLLISION (une boîte invisible autour des murs) ;
+#   - `DecorVillage` pose le MODÈLE VISIBLE par-dessus.
+# Le joueur se cogne donc à la boîte, jamais au modèle : la collision reste
+# simple et prévisible, quelle que soit la complexité de l'asset.
+#
+# `taille` = l'emprise des MURS seulement (largeur, hauteur, profondeur), sans
+# le toit ni la cheminée — on ne veut pas d'un mur invisible au-dessus du toit.
+# Ces valeurs viennent des paramètres passés à `maison()` dans gen_maison.py :
+# hauteur des murs + 0.55 m de soubassement.
+const MODELES := {
+	"maison_a": Vector3(7.0, 4.15, 6.5),
+	"maison_b": Vector3(5.5, 3.75, 5.0),
+	"moulin":   Vector3(7.5, 5.95, 7.0),
+}
+
+# `pos` est posée AU SOL (y = 0), pas au centre du volume.
+# `rot` en radians : la façade (porte + fenêtres) regarde le sud avant rotation.
+# `echelle` donne la variété — trois modèles suffisent pour sept maisons.
+const MAISONS := [
+	{ "modele": "maison_a", "pos": Vector3( 22, 0,  14), "rot":  0.00, "echelle": 1.15 },  # Lira
+	{ "modele": "maison_a", "pos": Vector3( 22, 0,  -6), "rot":  0.00, "echelle": 1.10 },  # voisin — NE PAS tourner : le perchoir est calé sur son faîtage
+	{ "modele": "moulin",   "pos": Vector3(-22, 0, -12), "rot":  0.25, "echelle": 1.10 },  # moulin de Brennan
+	{ "modele": "maison_b", "pos": Vector3(-18, 0,  14), "rot": -0.25, "echelle": 1.15 },  # maisons de bruit
+	{ "modele": "maison_a", "pos": Vector3( -6, 0,  22), "rot":  0.15, "echelle": 0.95 },
+	{ "modele": "maison_b", "pos": Vector3(  8, 0,  24), "rot": -0.12, "echelle": 1.05 },
+	{ "modele": "maison_b", "pos": Vector3( 20, 0,  18), "rot":  0.45, "echelle": 0.90 },
+]
+
+# Emprise au sol d'une maison, échelle comprise. Utilisée par la collision et
+# par le décor (pour ne pas planter un arbre dans un mur).
+static func emprise(entree: Dictionary) -> Vector3:
+	return MODELES[entree["modele"]] * float(entree["echelle"])
 
 @onready var puzzle1       = $Puzzle1PorteDouble
 @onready var puzzle2       = $Puzzle2Oiseau
@@ -31,6 +71,7 @@ var _choix_affiche: bool  = false
 func _ready() -> void:
 	set_process(false)
 	_construire_village()
+	_habiller_le_village()
 	_coloriser_puzzles()
 	_configurer_echo_liane()
 	_connecter_puzzles()
@@ -44,31 +85,23 @@ func _ready() -> void:
 
 func _construire_village() -> void:
 	# ── Sol ───────────────────────────────────────────────────────────────────
-	_sol(Vector3(80, 0.2, 45), Vector3(0, -0.1, -17.5))  # centre/nord (z=-40 à z=+5)
-	_sol(Vector3(80, 0.2, 30), Vector3(0, -0.1,  20.0))  # sud / entrée (z=+5 à z=+35)
+	# Une seule dalle, assez large pour que la forêt du décor cache ses bords.
+	# Elle va de x=-55 à x=+55 et de z=-65 à z=+40. L'ancien sol s'arrêtait à
+	# z=-40 : la stèle (z=-44) et la vieille maison (z=-40) flottaient dans le vide.
+	_sol(Vector3(110, 0.2, 105), Vector3(0, -0.1, -12.5))
 
-	# ── Maisons ───────────────────────────────────────────────────────────────
-	# Maison de Lira (est, en face de l'Aelith)
-	_maison(Vector3(8, 4, 8), Vector3( 22, 2.0,  14))
-
-	# Maison voisin (est, côté nord — l'oiseau du Puzzle 2 est sur ce toit)
-	_maison(Vector3(8, 4, 8), Vector3( 22, 2.0,  -6))
-
-	# Moulin de Brennan (ouest — plus grand, c'est un moulin)
-	_maison(Vector3(10, 6, 10), Vector3(-22, 3.0, -12))
-
-	# Maisons de bruit (camouflent Vaenmor, donnent vie au village)
-	_maison(Vector3(7, 4, 7), Vector3(-18, 2.0,  14))
-	_maison(Vector3(7, 4, 6), Vector3( -6, 2.0,  22))
-	_maison(Vector3(6, 4, 7), Vector3(  8, 2.0,  24))
-	_maison(Vector3(6, 3, 6), Vector3( 20, 1.5,  18))  # Maison supplémentaire
+	# ── Maisons : la collision seulement, le modèle vient avec le décor ───────
+	for maison in MAISONS:
+		_collision_maison(maison)
 
 	# ── Puits central ─────────────────────────────────────────────────────────
 	_mur(Vector3(1.8, 1.5, 1.8), Vector3(7.0, 0.75, 6.0), COULEUR_PIERRE)
 
 	# ── Perchoir de l'oiseau ──────────────────────────────────────────────────
-	# Sur le toit de la maison voisin (est, z=-6).
-	_mur(Vector3(2.0, 0.6, 2.0), Vector3(23.0, 6.2, -6.0), COULEUR_PERCHOIR)
+	# Sur le faîtage de la maison voisin (est). Le modèle Blender monte plus
+	# haut que l'ancienne boîte : murs 4.57 + toit 2.46 ≈ 7.0 m. Décalé vers le
+	# sud du faîtage pour ne pas être caché par la cheminée.
+	_mur(Vector3(1.3, 0.45, 1.3), Vector3(22.0, 7.25, -3.2), COULEUR_PERCHOIR)
 
 	# ── Palissade nord ────────────────────────────────────────────────────────
 	# Gap au centre pour la Porte du Puzzle 1 (z=-36).
@@ -95,6 +128,23 @@ func _construire_village() -> void:
 	_mur(Vector3(18.0, 0.5, 0.4), Vector3(-22.0, 0.25, -38.0), COULEUR_PIERRE)
 	# Fond du ruisseau (eau)
 	_mur(Vector3(16.0, 0.1, 7.5), Vector3(-22.0, -0.05, -34.0), COULEUR_EAU)
+
+# Le décor est ajouté APRÈS la géométrie de base, donc par-dessus : les toits
+# se posent sur des maisons qui existent déjà.
+func _habiller_le_village() -> void:
+	# On ajoute l'emprise calculée à chaque maison avant de passer la liste :
+	# le décor a besoin de la taille (pour la terre battue et pour ne pas
+	# planter d'arbre dans un mur) mais n'a pas à connaître la table MODELES.
+	var liste: Array = []
+	for maison in MAISONS:
+		var entree: Dictionary = maison.duplicate()
+		entree["taille"] = emprise(maison)
+		liste.append(entree)
+
+	var decor := DecorVillage.new()
+	decor.name = "Decor"
+	add_child(decor)
+	decor.construire(liste)
 
 func _configurer_echo_liane() -> void:
 	var echo: MeshInstance3D = $Puzzle3RoueEau/EchoLiane
@@ -242,8 +292,22 @@ func _sol(taille: Vector3, pos: Vector3) -> void:
 func _mur(taille: Vector3, pos: Vector3, couleur: Color) -> void:
 	_bloc(taille, pos, couleur)
 
-func _maison(taille: Vector3, pos: Vector3) -> void:
-	_bloc(taille, pos, COULEUR_BOIS)
+# Boîte de collision d'une maison : invisible, tournée comme le modèle, et
+# calée sur les murs uniquement (le joueur passe donc sous l'avant-toit).
+func _collision_maison(entree: Dictionary) -> void:
+	var taille: Vector3 = emprise(entree)
+	var pos:    Vector3 = entree["pos"]
+
+	var sb := StaticBody3D.new()
+	sb.position   = pos + Vector3(0, taille.y * 0.5, 0)
+	sb.rotation.y = entree["rot"]
+
+	var cs    := CollisionShape3D.new()
+	var forme := BoxShape3D.new()
+	forme.size = taille
+	cs.shape   = forme
+	sb.add_child(cs)
+	add_child(sb)
 
 func _bloc(taille: Vector3, pos: Vector3, couleur: Color) -> void:
 	var sb := StaticBody3D.new()
