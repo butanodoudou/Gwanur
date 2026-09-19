@@ -653,6 +653,39 @@ Le nombre de polygones n'est nulle part dans cette liste. On reste en Ghibli sty
 
 ---
 
+## 2026-09-19 — Caméra : rotation verticale
+
+### Orbite sur deux axes
+**Décision :** `camera_follow.gd` gagne un angle vertical (`_angle_v`), borné entre -29° et +78°. La souris (clic droit) et le stick droit le pilotent, convention **non inversée** : souris vers le haut = on regarde vers le haut.
+**Raison :** La caméra ne tournait qu'à l'horizontale. On ne pouvait voir ni la canopée de l'Aelith — l'élément central de la zone — ni le sol.
+**Impact :** `distance` et `hauteur` décrivent maintenant la position de DÉPART ; `_ready()` les convertit en rayon d'orbite (10,8 m) et angle initial (34°). Le cadrage au démarrage est identique à l'ancien, au centimètre près.
+
+### Viser plus haut quand le sol bloque
+**Décision :** Sous `HAUTEUR_MIN` (0,8 m), la caméra ne descend plus — et ce qu'elle ne peut pas faire en descendant, elle le fait en **visant au-dessus du personnage**.
+**Raison :** Une caméra orbitale qui vise toujours le personnage doit passer SOUS lui pour regarder vers le haut. Sur un sol plat, elle se retrouve sous terre. Sans compensation, la borne basse ne servait à rien : le test mesurait 1° de plus que l'horizontale. Avec, on monte à 29° — la canopée remplit l'écran.
+**Note :** `HAUTEUR_MIN` suppose un sol plat à y = 0. À revoir le jour où il y a du relief.
+
+### Limite connue — la caméra traverse le feuillage
+En visée plongeante près de l'Aelith, la caméra monte à ~11 m et se retrouve **dans** la canopée. Un raycast caméra ne corrigerait rien : le feuillage du GLB n'a pas de collision (seul le tronc en a une, posée par `zone1.gd`). À traiter, si ça gêne en playtest, en bridant l'angle haut à proximité de l'arbre.
+
+### Ressenti — le modèle du pivot
+**Décision :** La caméra est accrochée **rigidement** à un point invisible (le pivot) ; c'est le PIVOT qui suit le personnage en douceur, pas la caméra.
+**Alternative écartée :** amortir la position de la caméra (`global_position.lerp(vise, 0.08)`), ce qui était fait jusqu'ici.
+**Raison :** Amortir la caméra amortit AUSSI sa rotation. Le joueur pousse le stick, l'image suit un dixième de seconde plus tard : c'est la sensation de caméra « molle », accrochée par un élastique. Pire, le déplacement du personnage est calculé sur `get_angle_h()`, l'angle d'ENTRÉE, donc les commandes tournaient instantanément pendant que l'image traînait. Avec le pivot : la rotation répond à l'image près, et la caméra garde son retard agréable quand on marche.
+
+### Trois autres corrections de ressenti
+1. **Amortissement indépendant du framerate.** `lerp(x, 0.08)` par frame rendait la caméra deux fois plus vive à 120 fps qu'à 60. Remplacé par `1 - exp(-vitesse * delta)`. `lissage` (0.08) devient `vitesse_suivi` (12,0 par seconde).
+2. **Le pivot vise la tête** (`HAUTEUR_REGARD` = 1 m au-dessus de l'origine du personnage), pas les pieds. Viser les pieds tasse l'horizon en haut de l'écran.
+3. **Zone morte + réponse au carré sur le stick.** En linéaire, au quart du stick on tourne déjà au quart de la vitesse max : impossible d'ajuster finement. Au carré, le début de course est lent et précis, la vitesse maximale est inchangée.
+
+### Test
+`tools/tests/test_camera.gd`, 14 vérifications. Il contrôle la **direction du regard** et le **ressenti**, pas seulement la position : que la rotation soit rigide (aucun retard après un quart de tour), que le suivi donne le même résultat à 60 et à 120 fps, et que la courbe du stick soit bien progressive. Ces trois propriétés sont invisibles à la lecture et faciles à casser par accident.
+
+### Reste à voir
+`character_base.gd` amortit l'orientation du personnage avec `lerp_angle(..., 0.15)`, qui a le même défaut de dépendance au framerate. Pas touché : ça change le ressenti du personnage, pas de la caméra.
+
+---
+
 ## À décider — Zone 1
 
 - [x] Les lettres d'Aldric — lettre 1 livrée par Vaenmor
