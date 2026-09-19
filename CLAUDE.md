@@ -8,6 +8,8 @@ Lis également tous les fichiers dans `/docs` pour avoir le contexte complet.
 ## C'est quoi Gwanur ?
 
 Un jeu vidéo d'exploration et de puzzles coopératif local, jouable en split-screen vertical sur PC.
+**Sylvara, le village de la Zone 1, est bâti DANS le tronc creux de l'Aelith** — l'arbre est si vaste
+que le village tient dans sa cavité, protégé par une paroi de bois de 62 m. Voir `docs/DECISIONS.md`.
 Deux joueurs, deux personnages, aucun combat. Uniquement de l'exploration et des puzzles.
 
 **Ambiance :** Heroic fantasy médiéval, style Studio Ghibli / Anime semi-réaliste  
@@ -79,8 +81,12 @@ gwanur/
 ├── tools/
 │   ├── tests/              ← tests headless (voir l'en-tête de chaque fichier)
 │   ├── capture_zone1.tscn  ← photographie la zone sous plusieurs angles
-│   ├── compare_maison.tscn ← compare un asset Blender à son équivalent procédural
-│   ├── gen_maison.py       ← génère maison_a / maison_b / moulin (.glb)
+│   ├── vitrine.tscn        ← aligne des .glb côte à côte pour les juger
+│   ├── blender_commun.py   ← palette, primitives et export partagés
+│   ├── gen_maison.py       ← maison_a / maison_b / moulin
+│   ├── gen_arbres.py       ← 4 essences + buisson
+│   ├── gen_aelith_v2.py    ← la paroi et la canopée de l'Aelith
+│   └── gen_personnages.py  ← Kael et Mira
 │   └── *.py                ← scripts de génération/retouche d'assets
 ├── assets/
 │   ├── models/             ← modèles 3D (environnement, personnages)
@@ -108,7 +114,8 @@ Ce qui existe :
 - `scripts/globals/` — GameManager (moralité, progression) + DialogueManager (AutoLoads)
 - `scripts/zones/zone1.gd` — géométrie procédurale + stèle du Pacte + grimoire et choix de fin de zone
 - `scripts/zones/decor_village.gd` — décor du village (maisons .glb, forêt, chemins, props, lanternes) — sans collision, sauf les troncs
-- `assets/models/environnement/` — `maison_a`, `maison_b`, `moulin` (générés par `tools/gen_maison.py`) + l'Aelith
+- `assets/models/environnement/` — maisons, arbres, paroi et canopée de l'Aelith (tous générés par les scripts `tools/gen_*.py`)
+- `assets/models/personnages/` — `kael.glb`, `mira.glb` (sans squelette : ils glissent)
 - `scenes/main.tscn` — split-screen vertical opérationnel
 - `scenes/menu_principal.tscn` — scène de démarrage (Commencer / Quitter)
 - `docs/` — LORE, GAME_DESIGN, ART_DIRECTION, DECISIONS complets
@@ -122,7 +129,8 @@ l'input lui-même. Pour un élément du décor, attache le script `PointInteract
 Ce qui reste à faire :
 - **Son** — au moins un thème Zone 1 + quelques SFX
 - **L'Aelith** — le modèle GLB est présent, l'interaction propre reste à écrire
-- **Polish visuel** — les maisons sont modélisées ; restent les props (puits, tonneaux, charrette, clôtures) et les arbres, encore en boîtes procédurales
+- **Polish visuel** — maisons, arbres, Aelith et héros sont modélisés ; restent les **PNJ** (encore des capsules) et les props (puits, tonneaux, charrette, clôtures)
+- **Animation** — aucun squelette : Kael et Mira glissent sans marcher
 - Passe de playtest à deux manettes
 
 Consulte `docs/DECISIONS.md` pour le détail de toutes les décisions prises.

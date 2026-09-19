@@ -16,10 +16,10 @@ sky_material = SubResource("Sky_001")
 background_mode = 2
 sky = SubResource("SkyRes_001")
 ambient_light_source = 3
-ambient_light_energy = 0.5
+ambient_light_energy = 1.05
 fog_enabled = true
 fog_light_color = Color(0.807843, 0.85098, 0.878431, 1)
-fog_density = 0.0022
+fog_density = 0.0008
 fog_sky_affect = 0.2
 
 [node name="Main" type="Node3D" unique_id=1086606185]
@@ -31,10 +31,12 @@ script = ExtResource("1_main")
 environment = SubResource("Env_001")
 
 [node name="LumiereDirectionnelle" type="DirectionalLight3D" parent="Monde" unique_id=1103342359]
-transform = Transform3D(1, 0, 0, 0, 0.707107, -0.707107, 0, 0.707107, 0.707107, 0, 10, 0)
+transform = Transform3D(1, 0, 0, 0, 0.374607, -0.927184, 0, 0.927184, 0.374607, 0, 10, 0)
 light_color = Color(1, 0.952941, 0.8, 1)
 light_energy = 1.2
 shadow_enabled = true
+shadow_normal_bias = 3.0
+directional_shadow_max_distance = 180.0
 
 [node name="Kael" parent="Monde" unique_id=1976769472 instance=ExtResource("2_kael")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 1, 5)

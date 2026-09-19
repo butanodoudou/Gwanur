@@ -686,6 +686,46 @@ En visée plongeante près de l'Aelith, la caméra monte à ~11 m et se retrouve
 
 ---
 
+## 2026-09-19 — Modélisation : arbres, Aelith, personnages
+
+### Une boîte à outils Blender partagée
+**Décision :** `tools/blender_commun.py` porte la palette, la conversion sRGB→linéaire, les primitives (`boite`, `boule`, `cylindre`, `branche`) et l'export. Les scripts de génération n'ont plus que la forme à décrire.
+**Raison :** `gen_maison.py` avait déjà sa propre copie de `vers_lineaire()` et de l'export. Trois scripts de plus, c'était trois copies à maintenir.
+**Note :** `gen_maison.py` n'a PAS été migré vers ce module — il marche, et le migrer pour le plaisir risquerait de casser trois assets validés. À faire à la prochaine retouche des maisons.
+
+### Les arbres
+**Décision :** 4 essences + 1 buisson (`tools/gen_arbres.py`), affichés en **MultiMesh**.
+**Raison forme :** Ce qui fait qu'un arbre ressemble à un arbre, dans l'ordre : l'empattement des racines, la ramification (du feuillage AU BOUT des branches), la canopée en grappes de tailles et teintes variées, l'asymétrie. Pas le nombre de polygones — chaque arbre fait 1 000 à 1 900 faces.
+**Raison MultiMesh :** ~190 arbres × 2 vues (écran splitté) = 380 ordres de dessin pour la seule forêt. Un `MultiMeshInstance3D` par essence : 5 ordres de dessin. Le prix : tous les arbres d'une essence partagent le même maillage, la variété vient de la rotation et de l'échelle.
+**Piège rencontré :** un MultiMesh n'utilise QUE le maillage, pas le noeud qui le porte — or Godot range le maillage d'un .glb sous un noeud portant la conversion d'axes Blender (Z haut) → Godot (Y haut). Sans recomposer cette transformation, **tous les arbres sont couchés au sol**. Voir `_maillage_du_modele()`.
+
+### L'Aelith — le village est DANS le tronc
+**Décision :** L'Aelith n'est plus un arbre au centre du village : c'est un tronc creux de 56 m de rayon et 62 m de haut **qui contient toute la zone jouable**. Sylvara s'est installée dans la cavité ; la paroi est son rempart naturel, avec deux ouvertures — l'entrée sud et la sortie nord, derrière la Porte Double du Puzzle 1.
+**Alternative écartée :** un arbre géant classique au centre de la place. Un tronc majestueux fait au moins 18 m de diamètre : il écrasait le puits, Vaenmor et la moitié des chemins.
+**Raison :** C'est l'idée du joueur, et elle tient debout : elle explique pourquoi le village n'a jamais été attaqué, elle donne une échelle qu'aucun arbre posé au sol ne peut donner, et elle rend la géométrie du niveau narrative (les deux seules ouvertures sont l'entrée et la sortie).
+**Conséquences assumées :**
+- Il n'y a **pas de tronc au centre** : le centre est la place. Le petit saule qui y pousse (`nimbus_willow`, déjà là) devient un **rejet de l'Aelith** — l'arbre-enfant au coeur de l'arbre-parent.
+- Un **oculus** : la canopée s'écarte au-dessus du centre. Sans lui le village serait dans le noir, et Gwanur est Ghibli, pas souterrain.
+- Le soleil est passé de 45° à 68° d'élévation et l'ambiante de 0.5 à 1.05. À 45°, le rempart de 62 m jetait une ombre de 62 m et plongeait la moitié du village dans le noir.
+- Le brouillard passe de 0.0022 à 0.0008 : on regarde maintenant à 150 m, plus à 40.
+- Le sol passe à 260 × 260 pour porter toute la canopée.
+- La forêt du décor reste à moins de 48 m du centre de l'anneau — au-delà, les arbres poussaient dans le mur.
+- ⚠ **Le LORE n'a pas été mis à jour.** `docs/LORE.md` décrit encore un village autour de l'arbre. À reprendre.
+
+### Les personnages
+**Décision :** Kael et Mira sont modélisés (`tools/gen_personnages.py`), ~1 200 faces chacun, **sans squelette ni animation**.
+**Raison :** À 9 m — la distance de la caméra — ce qui identifie un personnage est sa silhouette, sa couleur dominante et son équipement qui déborde de la silhouette. Pas son visage. D'où : Kael élancé, tunique verte, oreilles pointues, brassards de Sève lumineux, corne dans le dos ; Mira plus ramassée, plastron de cuir auburn, grappin de cuivre à l'avant-bras, lanterne allumée à la hanche, sac d'alchimiste.
+**Limite connue :** ils glissent sans marcher. Le rig et les animations sont un chantier à part entière, pas un ajustement.
+**Orientation :** le modèle regarde +Z, ce qu'attend `character_base.gd` (`rotation.y = atan2(direction.x, direction.z)`).
+
+### Reste en capsules : les PNJ
+Les neuf villageois (`pnj.gd`) sont encore des capsules colorées, ce qui se voit maintenant que les héros sont modélisés. Réutiliser le corps de `gen_personnages.py` avec d'autres teintes est la suite logique — la difficulté est de pouvoir changer la couleur de la tunique par PNJ sans un .glb par villageois.
+
+### Incident
+`tools/gen_aelith.py` (l'ancien Aelith « v4 », dont le .glb n'était pas branché dans la scène) a été écrasé par erreur, puis restauré depuis git. Le nouveau script vit à côté, sous `gen_aelith_v2.py`.
+
+---
+
 ## À décider — Zone 1
 
 - [x] Les lettres d'Aldric — lettre 1 livrée par Vaenmor

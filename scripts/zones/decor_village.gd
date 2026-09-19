@@ -74,6 +74,7 @@ func construire(maisons: Array) -> void:
 	_rng.seed = GRAINE
 	_maisons  = maisons
 
+	_poser_l_aelith()
 	_poser_les_maisons()
 	_battre_la_terre()
 	_tracer_les_chemins()
@@ -84,6 +85,29 @@ func construire(maisons: Array) -> void:
 	_remplir_le_village()
 	_allumer_les_lanternes()
 	_batir_la_vieille_maison()
+
+# ──────────────────────────────────────────────────────────────────────────────
+# L'AELITH
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# Deux modèles : la paroi (le tronc creux qui ceinture la zone) et la canopée
+# (les branches en voûte, très haut). Ils sont séparés parce qu'on retouche
+# beaucoup plus souvent l'un que l'autre — et parce qu'un seul .glb de 21 000
+# faces serait pénible à recharger à chaque essai.
+#
+# La collision du rempart est posée par `zone1.gd`, comme pour les maisons.
+
+const AELITH_CENTRE := Vector3(0, 0, -10)
+
+func _poser_l_aelith() -> void:
+	for nom in ["aelith_paroi", "aelith_canopee"]:
+		var modele: PackedScene = load(DOSSIER_MODELES + nom + ".glb")
+		if modele == null:
+			push_warning("Modèle manquant : " + nom + " — lance tools/gen_aelith_v2.py")
+			continue
+		var noeud: Node3D = modele.instantiate()
+		noeud.position = AELITH_CENTRE
+		add_child(noeud)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # LES MAISONS
@@ -195,60 +219,159 @@ func _dalles_entre(depart: Vector3, arrivee: Vector3, largeur: float, nombre: in
 # ──────────────────────────────────────────────────────────────────────────────
 # FORÊT
 # ──────────────────────────────────────────────────────────────────────────────
+#
+# Les arbres sont des modèles Blender (`tools/gen_arbres.py`), affichés en
+# MULTIMESH.
+#
+# POURQUOI UN MULTIMESH
+# Un MeshInstance3D par arbre = un ordre de dessin par arbre. Avec ~190 arbres
+# et l'écran splitté (la scène est rendue DEUX fois par image), ça fait 380
+# ordres de dessin rien que pour la forêt. Un `MultiMeshInstance3D` dessine
+# TOUS les arbres d'une même essence en un seul ordre : on passe à 4.
+# Le prix à payer : tous les arbres d'une essence partagent le même maillage,
+# donc la variété doit venir de la rotation et de l'échelle.
+
+const ESSENCES := {
+	"arbre_chene":   { "hauteur": 10.5, "rayon_tronc": 0.50 },
+	"arbre_erable":  { "hauteur":  7.5, "rayon_tronc": 0.36 },
+	"arbre_pin":     { "hauteur":  8.2, "rayon_tronc": 0.40 },
+	"arbre_bouleau": { "hauteur":  8.1, "rayon_tronc": 0.28 },
+}
+
+# Les plantations en attente, rangées par essence, avant d'être versées dans
+# les MultiMesh : { "arbre_chene": [Transform3D, ...], ... }
+var _plantations: Dictionary = {}
 
 func _planter_la_foret() -> void:
 	# Une couronne d'arbres autour du village : on ne voit plus le bord du sol,
 	# et le village se sent « niché dans la forêt ».
 	for i in 130:
 		var angle := _rng.randf_range(0.0, TAU)
-		var rayon := _rng.randf_range(27.0, 52.0)
+		var rayon := _rng.randf_range(27.0, 46.0)
 		var pos   := Vector3(sin(angle) * rayon, 0.0, cos(angle) * rayon)
 		if not _emplacement_libre(pos, 3.0):
 			continue
-		_arbre(pos, _rng.randf_range(5.0, 9.0))
+		_planter(pos, _essence_au_hasard(), _rng.randf_range(0.75, 1.15))
 
 	# Derrière la palissade nord : c'est la forêt qui commence, la sortie de la
 	# zone. Sans ça, tout le fond de la carte derrière la porte est vide.
+	# Plus de conifères ici : la silhouette verticale ferme mieux l'horizon.
 	for i in 60:
-		var pos := Vector3(_rng.randf_range(-48.0, 48.0), 0.0, _rng.randf_range(-62.0, -42.0))
+		var pos := Vector3(_rng.randf_range(-44.0, 44.0), 0.0, _rng.randf_range(-58.0, -42.0))
 		if not _emplacement_libre(pos, 2.0):
 			continue
-		_arbre(pos, _rng.randf_range(6.0, 10.0))
+		var essence := "arbre_pin" if _rng.randf() < 0.55 else _essence_au_hasard()
+		_planter(pos, essence, _rng.randf_range(0.85, 1.3))
 
 	# Quelques arbres isolés dans le village lui-même (ombre, verticalité).
 	for pos in [
 		Vector3( -9, 0,  18), Vector3( 13, 0,  -2), Vector3(-16, 0,   4),
 		Vector3( 11, 0,  16), Vector3(-10, 0, -18), Vector3( 16, 0,  26),
 	]:
-		_arbre(pos, _rng.randf_range(4.5, 6.5))
+		_planter(pos, "arbre_chene" if _rng.randf() < 0.5 else "arbre_erable",
+				 _rng.randf_range(0.7, 0.95))
 
-# Un arbre = un tronc (cylindre) + 3 boules de feuillage décalées.
-# Trois boules plutôt qu'une seule : la silhouette devient irrégulière, donc
-# beaucoup plus organique — c'est ce qui donne le côté dessiné à la main.
-func _arbre(pos: Vector3, hauteur: float) -> void:
-	var tronc := CylinderMesh.new()
-	tronc.top_radius      = hauteur * 0.045
-	tronc.bottom_radius   = hauteur * 0.075
-	tronc.height          = hauteur
-	tronc.radial_segments = 6
-	_prop(tronc, pos + Vector3(0, hauteur * 0.5, 0), C_BOIS)
+	# Des buissons en lisière et autour des maisons.
+	for i in 60:
+		var pos := _position_au_hasard(10.0, 40.0)
+		if pos == Vector3.INF:
+			continue
+		_planter(pos, "buisson", _rng.randf_range(0.7, 1.4))
 
-	for i in 3:
-		var boule := SphereMesh.new()
-		boule.radius          = hauteur * _rng.randf_range(0.22, 0.32)
-		boule.height          = boule.radius * 1.8
-		boule.radial_segments = 8
-		boule.rings           = 5
-		var decalage := Vector3(
-			_rng.randf_range(-0.8, 0.8),
-			hauteur * (0.78 + i * 0.09),
-			_rng.randf_range(-0.8, 0.8)
+	_verser_les_multimesh()
+
+func _essence_au_hasard() -> String:
+	var tirage := _rng.randf()
+	if tirage < 0.35:
+		return "arbre_chene"
+	if tirage < 0.65:
+		return "arbre_erable"
+	if tirage < 0.85:
+		return "arbre_bouleau"
+	return "arbre_pin"
+
+# Enregistre un arbre. Rien n'est affiché avant `_verser_les_multimesh()`.
+func _planter(pos: Vector3, essence: String, echelle: float) -> void:
+	var t := Transform3D()
+	# Rotation au hasard autour de la verticale : c'est elle qui empêche de
+	# reconnaître le même modèle répété.
+	t = t.rotated(Vector3.UP, _rng.randf_range(0.0, TAU))
+	t = t.scaled(Vector3.ONE * echelle)
+	t.origin = pos
+
+	if not _plantations.has(essence):
+		_plantations[essence] = []
+	_plantations[essence].append(t)
+
+	# La collision reste un cylindre par arbre — invisible, et beaucoup moins
+	# cher qu'une collision sur le maillage. Les buissons n'en ont pas : on
+	# doit pouvoir les traverser.
+	if ESSENCES.has(essence):
+		var infos: Dictionary = ESSENCES[essence]
+		var hauteur: float = float(infos["hauteur"]) * echelle
+		_collision_cylindre(
+			pos + Vector3(0, hauteur * 0.5, 0),
+			float(infos["rayon_tronc"]) * echelle,
+			hauteur
 		)
-		var teinte := C_FEUILLE.lerp(C_FEUILLE_2, _rng.randf())
-		_prop(boule, pos + decalage, teinte)
 
-	# Seule collision de tout le décor : un cylindre fin autour du tronc.
-	_collision_cylindre(pos + Vector3(0, hauteur * 0.5, 0), hauteur * 0.09, hauteur)
+func _verser_les_multimesh() -> void:
+	for essence in _plantations:
+		var transformations: Array = _plantations[essence]
+		var modele := _maillage_du_modele(DOSSIER_MODELES + str(essence) + ".glb")
+		if modele.is_empty():
+			continue
+
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh             = modele["maillage"]
+		mm.instance_count   = transformations.size()
+		# On recompose avec la transformation interne du modèle. Sans elle,
+		# tous les arbres sont couchés : Godot range le maillage d'un .glb sous
+		# un noeud qui porte la conversion d'axes Blender (Z haut) → Godot
+		# (Y haut), et un MultiMesh n'utilise que le maillage, pas le noeud.
+		var correction: Transform3D = modele["transformation"]
+		for i in transformations.size():
+			mm.set_instance_transform(i, transformations[i] * correction)
+
+		var noeud := MultiMeshInstance3D.new()
+		noeud.name      = "Foret_" + str(essence)
+		noeud.multimesh = mm
+		add_child(noeud)
+
+# Sort d'un .glb son maillage ET la transformation qui va avec.
+# Les modèles sont fusionnés en un seul objet à l'export (voir `exporter()`
+# dans tools/blender_commun.py), il n'y a donc qu'un MeshInstance3D à trouver.
+# Renvoie { "maillage": Mesh, "transformation": Transform3D }, ou {} si raté.
+func _maillage_du_modele(chemin: String) -> Dictionary:
+	var scene: PackedScene = load(chemin)
+	if scene == null:
+		push_warning("Modèle introuvable : " + chemin + " — lance tools/gen_arbres.py")
+		return {}
+
+	var racine := scene.instantiate()
+	for noeud in _tous_les_enfants(racine):
+		if noeud is MeshInstance3D and noeud.mesh != null:
+			# On remonte jusqu'à la racine du modèle en accumulant les
+			# transformations de chaque parent.
+			var t := Transform3D.IDENTITY
+			var courant: Node = noeud
+			while courant != null and courant != racine.get_parent():
+				if courant is Node3D:
+					t = courant.transform * t
+				courant = courant.get_parent()
+			var resultat := { "maillage": noeud.mesh, "transformation": t }
+			racine.queue_free()
+			return resultat
+
+	racine.queue_free()
+	return {}
+
+func _tous_les_enfants(racine: Node) -> Array:
+	var liste: Array = [racine]
+	for enfant in racine.get_children():
+		liste.append_array(_tous_les_enfants(enfant))
+	return liste
 
 # ──────────────────────────────────────────────────────────────────────────────
 # HERBE, FLEURS, ROCHERS
@@ -650,8 +773,9 @@ func _position_au_hasard(rayon_min: float, rayon_max: float) -> Vector3:
 # Un emplacement est libre s'il ne tombe ni dans une maison, ni sur un chemin,
 # ni dans le ruisseau, ni sur une zone de puzzle.
 func _emplacement_libre(pos: Vector3, marge: float) -> bool:
-	# Rester sur le sol construit par zone1.gd (x ±55, z de -65 à +40)
-	if abs(pos.x) > 52.0 or pos.z > 37.0 or pos.z < -62.0:
+	# Rester DANS la cavité de l'Aelith : le rempart est à 56 m du centre de
+	# l'anneau, on garde 8 m de marge pour ne pas planter d'arbre dans le mur.
+	if pos.distance_to(AELITH_CENTRE) > 48.0:
 		return false
 	# Laisser le passage libre derrière la porte nord (la sortie de la zone)
 	if abs(pos.x) < 7.0 and pos.z < -36.0:

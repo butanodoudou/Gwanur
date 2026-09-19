@@ -1,17 +1,17 @@
 [gd_scene load_steps=4 format=3 uid="uid://kael_char_001"]
 
 [ext_resource type="Script" path="res://scripts/characters/kael.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://assets/models/personnages/kael.glb" id="2_modele"]
 
 [sub_resource type="CapsuleShape3D" id="Shape_001"]
 radius = 0.3
 height = 1.8
 
-[sub_resource type="CapsuleMesh" id="Mesh_001"]
-radius = 0.3
-height = 1.8
-
-; Kael — placeholder capsule en attente du vrai modèle 3D (pipeline Meshy → Blender)
-; Le CollisionShape3D est décalé en Y pour que les pieds soient à y=0
+; Kael — modèle généré par tools/gen_personnages.py
+; L'origine du CharacterBody3D est AUX PIEDS : la capsule de collision est
+; décalée de +0.9, le modèle .glb est déjà construit debout sur y=0 et n'a
+; donc aucun décalage. Sa face regarde +Z, ce qu'attend character_base.gd
+; (rotation.y = atan2(direction.x, direction.z)).
 [node name="Kael" type="CharacterBody3D"]
 script = ExtResource("1_script")
 
@@ -19,6 +19,4 @@ script = ExtResource("1_script")
 position = Vector3(0, 0.9, 0)
 shape = SubResource("Shape_001")
 
-[node name="Modele" type="MeshInstance3D" parent="."]
-position = Vector3(0, 0.9, 0)
-mesh = SubResource("Mesh_001")
+[node name="Modele" parent="." instance=ExtResource("2_modele")]

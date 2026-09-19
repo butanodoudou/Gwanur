@@ -36,3 +36,6 @@ desktop.ini
 
 # Captures de dev (tools/capture_zone1.tscn)
 tools/captures/
+
+# Cache Python des scripts Blender
+tools/__pycache__/

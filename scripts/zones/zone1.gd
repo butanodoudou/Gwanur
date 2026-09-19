@@ -1,8 +1,14 @@
 # scripts/zones/zone1.gd
 # Zone 1 — Sylvara, le Village des Lisières
 #
-# L'Aelith (Nimbus Willow) est au centre (0, 0, 0) — instancié dans zone1.tscn.
-# Le village s'étend en radial autour de l'arbre, rayon ~15m.
+# LE VILLAGE EST DANS LE TRONC DE L'AELITH.
+# L'arbre est si vieux que son tronc s'est creusé ; Sylvara s'est installée
+# dans la cavité. La paroi de bois qui ceinture la zone est son rempart
+# naturel, avec deux ouvertures seulement : l'entrée sud et la sortie nord.
+#
+# Le centre (0, 0, 0) n'est donc PAS un tronc mais la place du village. Le
+# petit saule qui y pousse est un rejet de l'Aelith — l'arbre-enfant au coeur
+# de l'arbre-parent (instancié dans zone1.tscn).
 # Entrée depuis le sud (+Z), sortie vers Zone 2 au nord (-Z).
 #
 # Responsabilités :
@@ -53,6 +59,23 @@ const MAISONS := [
 	{ "modele": "maison_b", "pos": Vector3( 20, 0,  18), "rot":  0.45, "echelle": 0.90 },
 ]
 
+# ── L'Aelith ──────────────────────────────────────────────────────────────────
+#
+# Ces valeurs DOIVENT rester identiques à celles de `tools/gen_aelith_v2.py`,
+# sinon la collision ne tombe pas sur la paroi visible.
+const AELITH_CENTRE   := Vector3(0, 0, -10)
+const AELITH_RAYON    := 56.0   # rayon intérieur de la cavité
+const AELITH_EPAISSEUR := 11.0
+const AELITH_HAUTEUR  := 64.0   # hauteur du mur de collision
+
+# Les ouvertures : (angle en radians, demi-largeur). 0 = sud, π = nord.
+const AELITH_OUVERTURES := [
+	[ 0.0,      0.085],   # entrée sud
+	[ PI,       0.075],   # sortie nord, derrière la Porte Double
+	[ PI * 0.5, 0.045],   # brèche est
+	[-PI * 0.5, 0.045],   # brèche ouest
+]
+
 # Emprise au sol d'une maison, échelle comprise. Utilisée par la collision et
 # par le décor (pour ne pas planter un arbre dans un mur).
 static func emprise(entree: Dictionary) -> Vector3:
@@ -85,10 +108,12 @@ func _ready() -> void:
 
 func _construire_village() -> void:
 	# ── Sol ───────────────────────────────────────────────────────────────────
-	# Une seule dalle, assez large pour que la forêt du décor cache ses bords.
-	# Elle va de x=-55 à x=+55 et de z=-65 à z=+40. L'ancien sol s'arrêtait à
-	# z=-40 : la stèle (z=-44) et la vieille maison (z=-40) flottaient dans le vide.
-	_sol(Vector3(110, 0.2, 105), Vector3(0, -0.1, -12.5))
+	# La dalle doit dépasser la paroi de l'Aelith (rayon 56 + épaisseur),
+	# sinon on verrait le vide sous le rempart.
+	_sol(Vector3(260, 0.2, 260), AELITH_CENTRE + Vector3(0, -0.1, 0))
+
+	# ── La paroi de l'Aelith : le mur de collision ───────────────────────────
+	_ceinture_aelith()
 
 	# ── Maisons : la collision seulement, le modèle vient avec le décor ───────
 	for maison in MAISONS:
@@ -128,6 +153,41 @@ func _construire_village() -> void:
 	_mur(Vector3(18.0, 0.5, 0.4), Vector3(-22.0, 0.25, -38.0), COULEUR_PIERRE)
 	# Fond du ruisseau (eau)
 	_mur(Vector3(16.0, 0.1, 7.5), Vector3(-22.0, -0.05, -34.0), COULEUR_EAU)
+
+# Le rempart : une suite de pans droits qui approchent le cercle. Une boîte
+# par secteur, invisible — le modèle visible est posé par le décor.
+# On saute les ouvertures : c'est par là qu'on entre et qu'on sort.
+func _ceinture_aelith() -> void:
+	var secteurs := 64
+	var rayon := AELITH_RAYON + AELITH_EPAISSEUR * 0.5
+	for i in secteurs:
+		var angle := float(i) * TAU / float(secteurs)
+		if _dans_une_ouverture(angle):
+			continue
+
+		# Largeur du pan : la corde du secteur, un peu élargie pour que deux
+		# pans voisins se recouvrent et ne laissent pas de fente.
+		var corde := 2.0 * rayon * sin(PI / float(secteurs)) * 1.25
+
+		var sb := StaticBody3D.new()
+		sb.position = AELITH_CENTRE + Vector3(
+			sin(angle) * rayon, AELITH_HAUTEUR * 0.5, cos(angle) * rayon)
+		sb.rotation.y = angle
+
+		var cs    := CollisionShape3D.new()
+		var forme := BoxShape3D.new()
+		forme.size = Vector3(corde, AELITH_HAUTEUR, AELITH_EPAISSEUR)
+		cs.shape   = forme
+		sb.add_child(cs)
+		add_child(sb)
+
+func _dans_une_ouverture(angle: float) -> bool:
+	for ouverture in AELITH_OUVERTURES:
+		# On mesure l'écart d'angle par un atan2 pour gérer le passage par ±π.
+		var d: float = angle - float(ouverture[0])
+		if absf(atan2(sin(d), cos(d))) < float(ouverture[1]):
+			return true
+	return false
 
 # Le décor est ajouté APRÈS la géométrie de base, donc par-dessus : les toits
 # se posent sur des maisons qui existent déjà.
