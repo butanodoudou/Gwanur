@@ -1,11 +1,11 @@
-[gd_resource type="AudioBusLayout" load_steps=3 format=3]
+[gd_resource type="AudioBusLayout" format=3 uid="uid://prk8x1si4edv"]
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_gauche"]
-resource_name = &"Panner"
+resource_name = "Panner"
 pan = -0.3
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_droite"]
-resource_name = &"Panner"
+resource_name = "Panner"
 pan = 0.3
 
 [resource]
