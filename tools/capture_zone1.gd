@@ -28,7 +28,9 @@ const VUES := [
 	{ "nom": "vaenmor", "pos": Vector3(8, 3.2, 11),  "cible": Vector3(3, 1.2, 2.5) },
 	{ "nom": "porte",   "pos": Vector3(3, 4, -20),   "cible": Vector3(0, 2, -36) },
 	{ "nom": "roue",    "pos": Vector3(-12, 4, -22), "cible": Vector3(-20, 1, -32) },
-	{ "nom": "foule",   "pos": Vector3(4, 4, 26),    "cible": Vector3(10, 1, 14) },
+	{ "nom": "foule",   "pos": Vector3(11, 2.6, 13),  "cible": Vector3(16, 1, 20) },
+	{ "nom": "villageoises", "pos": Vector3(-6, 3, 17), "cible": Vector3(-10, 1, 10) },
+	{ "nom": "pnj_proche", "pos": Vector3(6.5, 1.9, 7.5), "cible": Vector3(4, 1.0, 3.5) },
 ]
 
 func _ready() -> void:

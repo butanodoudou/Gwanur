@@ -1,12 +1,21 @@
 # scripts/npcs/pnj.gd
-# PNJ générique — crée son propre visuel (capsule + "!") et gère le dialogue.
+# PNJ générique — crée son propre visuel (modèle villageois + "!") et gère le dialogue.
 #
 # Propriétés à configurer depuis l'éditeur :
 #   nom_pnj    : nom affiché dans la boîte de dialogue
 #   lignes     : tableau de textes
-#   couleur    : couleur du placeholder (remplacé par le vrai modèle plus tard)
+#   couleur    : couleur de la tunique / de la robe du villageois
 #   flag_apres : flag GameManager à activer après la conversation
 #   verbe      : texte du prompt du HUD (vide → "Parler à <nom_pnj>")
+#   silhouette : "ancien", "villageois", "villageoise" ou "enfant"
+#                ("auto" → choisie d'après le nom du noeud, voir SILHOUETTES)
+#
+# LE VISUEL
+# Les modèles sont générés par `tools/gen_pnj.py` (Blender). Quatre
+# silhouettes pour neuf villageois : c'est la couleur de la tunique qui fait la
+# différence entre deux villageois de même silhouette. Le modèle contient un
+# matériau nommé `tunique_pnj` ; on le remplace ici par `couleur`.
+# Les PNJ ne marchent pas : ils sont immobiles et respirent (voir _process).
 #
 # Le PNJ ne lit PAS le bouton lui-même : il se signale à l'InteractionManager
 # quand un joueur approche, et celui-ci appelle declencher() au bon moment.
@@ -19,9 +28,30 @@ extends Node3D
 @export var couleur: Color = Color(0.7, 0.5, 0.3)
 @export var flag_apres: String = ""
 @export var verbe: String = ""
+# "auto" = d'après le nom du noeud (tableau SILHOUETTES ci-dessous).
+@export_enum("auto", "ancien", "villageois", "villageoise", "enfant") var silhouette: String = "auto"
+
+# Silhouette par défaut de chaque villageois de la Zone 1, d'après le NOM DU
+# NOEUD (pas nom_pnj, qui peut porter un accent ou changer avec les textes).
+# Mettre `silhouette` dans l'inspecteur passe outre ce tableau.
+const SILHOUETTES := {
+	"Vaenmor": "ancien",   "Caeryn": "ancien",
+	"Brennan": "villageois", "Eldwen": "villageois", "Tovan": "villageois",
+	"Lira": "villageoise", "Marnen": "villageoise", "Nyssil": "villageoise",
+	"Sorai": "enfant",
+}
+const DOSSIER_MODELES := "res://assets/models/personnages/pnj_"
+# Le nom du matériau à recolorer — contrat avec tools/gen_pnj.py.
+const MATERIAU_TUNIQUE := "tunique_pnj"
+
+# Respiration : la silhouette gonfle de 1 % en hauteur, sur un cycle lent.
+const RESPIRATION_AMPLITUDE := 0.01
+const RESPIRATION_PERIODE   := 3.8   # secondes par inspiration + expiration
 
 var _deja_parle: bool = false
 var _label_indicateur: Label3D = null
+var _visuel: Node3D = null
+var _temps: float = 0.0
 
 @onready var zone_proximite: Area3D = $ZoneProximite
 
@@ -30,29 +60,91 @@ func _ready() -> void:
 	zone_proximite.body_exited.connect(_sur_sortie)
 	_creer_visuel()
 
+# La respiration. Le modèle a son origine aux pieds : agrandir l'échelle Y le
+# fait donc « monter » sans le décoller du sol.
+func _process(delta: float) -> void:
+	if _visuel == null:
+		return
+	_temps += delta
+	_visuel.scale.y = 1.0 + RESPIRATION_AMPLITUDE * sin(_temps * TAU / RESPIRATION_PERIODE)
+
 func _creer_visuel() -> void:
-	# Corps — capsule colorée (placeholder en attendant le vrai modèle)
-	var mi := MeshInstance3D.new()
-	mi.position = Vector3(0, 0.9, 0)
-	var mesh := CapsuleMesh.new()
-	mesh.radius = 0.3
-	mesh.height = 1.8
-	mi.mesh = mesh
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = couleur
-	mi.set_surface_override_material(0, mat)
-	add_child(mi)
+	_visuel = _charger_modele()
+	if _visuel == null:
+		_visuel = _creer_capsule()
+	_visuel.name = "Visuel"
+	add_child(_visuel)
+	# Chaque villageois part d'un moment différent de son souffle : sinon les
+	# neuf respireraient en chœur, ce qui se remarque tout de suite.
+	# hash(name) donne un nombre fixe par PNJ — pas de hasard, c'est testable.
+	_temps = float(abs(hash(String(name))) % 1000) / 1000.0 * RESPIRATION_PERIODE
 
 	# Indicateur "!" — billboard jaune au-dessus de la tête, disparaît après dialogue
 	var label := Label3D.new()
 	label.text = "!"
-	label.position = Vector3(0, 2.3, 0)
+	# Au-dessus de la tête, quelle que soit la taille du villageois.
+	label.position = Vector3(0, 1.45 if _silhouette() == "enfant" else 2.3, 0)
 	label.font_size = 72
 	label.modulate = Color(1.0, 0.9, 0.1)
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.no_depth_test = true
 	add_child(label)
 	_label_indicateur = label
+
+func _silhouette() -> String:
+	if silhouette != "auto" and silhouette != "":
+		return silhouette
+	return SILHOUETTES.get(String(name), "villageois")
+
+# Instancie le modèle .glb et recolore sa tunique. Renvoie null si le fichier
+# manque (on retombe alors sur la capsule, pour ne jamais avoir un PNJ invisible).
+func _charger_modele() -> Node3D:
+	var chemin := DOSSIER_MODELES + _silhouette() + ".glb"
+	if not ResourceLoader.exists(chemin):
+		push_warning("Modèle de PNJ introuvable : " + chemin + " — lance tools/gen_pnj.py")
+		return null
+	var modele: Node3D = (load(chemin) as PackedScene).instantiate()
+	_recolorer_tunique(modele)
+	return modele
+
+# Parcourt tous les maillages du modèle et remplace, surface par surface, le
+# matériau `tunique_pnj` par une copie à la couleur de CE villageois.
+# `set_surface_override_material` ne touche que cette instance : les autres PNJ
+# qui partagent le même .glb gardent leur propre couleur.
+func _recolorer_tunique(racine: Node) -> void:
+	var a_voir: Array[Node] = [racine]
+	while not a_voir.is_empty():
+		var noeud: Node = a_voir.pop_back()
+		a_voir.append_array(noeud.get_children())
+		if not (noeud is MeshInstance3D):
+			continue
+		var mi := noeud as MeshInstance3D
+		if mi.mesh == null:
+			continue
+		for i in mi.mesh.get_surface_count():
+			var mat := mi.mesh.surface_get_material(i)
+			if mat == null or not mat.resource_name.begins_with(MATERIAU_TUNIQUE):
+				continue
+			var copie := mat.duplicate() as BaseMaterial3D
+			if copie == null:
+				continue
+			copie.albedo_color = couleur
+			mi.set_surface_override_material(i, copie)
+
+# L'ancien placeholder, gardé en secours si le .glb est absent.
+func _creer_capsule() -> Node3D:
+	var mi := MeshInstance3D.new()
+	var mesh := CapsuleMesh.new()
+	mesh.radius = 0.3
+	mesh.height = 1.8
+	mi.mesh = mesh
+	mi.position = Vector3(0, 0.9, 0)
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = couleur
+	mi.set_surface_override_material(0, mat)
+	var racine := Node3D.new()
+	racine.add_child(mi)
+	return racine
 
 # ──────────────────────────────────────────────────────────────────────────────
 # PROXIMITÉ — on signale sa présence au gestionnaire d'interactions

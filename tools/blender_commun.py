@@ -71,6 +71,27 @@ COULEURS = {
 	"cuivre":      (0.72, 0.45, 0.25),   # le grappin de Mira
 	"seve":        (0.55, 0.85, 0.60),   # les brassards de Sève de Kael
 	"lueur":       (1.00, 0.85, 0.55),   # la Lanterne à Mémoire
+	# PNJ — `tunique_pnj` est une couleur NEUTRE : Godot la remplace par la
+	# couleur propre à chaque villageois (voir scripts/npcs/pnj.gd). Le NOM du
+	# matériau est un contrat : ne pas le renommer.
+	"tunique_pnj": (0.78, 0.74, 0.66),
+	"lin":         (0.86, 0.80, 0.68),   # tablier, foulard
+	"cheveux_blanc": (0.86, 0.84, 0.80), # barbe et cheveux de l'ancien
+	"cheveux_chatain": (0.45, 0.30, 0.18),
+	"cheveux_roux": (0.62, 0.32, 0.18),
+	"feutre":      (0.36, 0.30, 0.24),   # chapeau du villageois
+	# Props
+	"bois_sombre": (0.30, 0.20, 0.13),
+	"bois_mouille": (0.26, 0.19, 0.14),  # la roue à aubes, toujours humide
+	"fer":         (0.30, 0.29, 0.28),   # ferrures, grille
+	"plume":       (0.96, 0.95, 0.92),   # l'oiseau blanc
+	"bec":         (0.90, 0.62, 0.25),
+	"pierre_claire": (0.78, 0.70, 0.56),  # la stèle, la margelle
+	"pierre_sombre": (0.52, 0.48, 0.42),
+	"galet":       (0.66, 0.62, 0.55),
+	"corde":       (0.72, 0.62, 0.44),
+	"tuile_puits": (0.55, 0.25, 0.16),
+	"or_grave":    (0.85, 0.68, 0.32),   # les runes de la stèle
 }
 
 _materiaux = {}
