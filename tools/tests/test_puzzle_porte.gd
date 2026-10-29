@@ -11,6 +11,9 @@
 
 extends Node
 
+# Le prompt affiche (E)/(Entrée) au clavier, (A) à la manette (voir le fichier).
+const TouchesJoueur = preload("res://scripts/ui/touches_joueur.gd")
+
 var _echecs: int = 0
 var _kael: Node3D
 var _mira: Node3D
@@ -45,7 +48,7 @@ func _ready() -> void:
 	await _placer(_kael, poignee_kael.global_position)
 
 	_verifier("Prompt de Kael sur sa poignee",
-		_hud_kael._label_prompt.text, "(A)  Tirer la poignée gauche")
+		_hud_kael._label_prompt.text, "(%s)  Tirer la poignée gauche" % TouchesJoueur.interagir(1))
 	_verifier("Mira ne voit pas le prompt de Kael",
 		str(_hud_mira._label_prompt.visible), "false")
 
@@ -66,7 +69,7 @@ func _ready() -> void:
 	# ── Mira rejoint et prend la sienne ─────────────────────────────────────
 	await _placer(_mira, poignee_mira.global_position)
 	_verifier("Prompt de Mira sur sa poignee",
-		_hud_mira._label_prompt.text, "(A)  Tirer la poignée droite")
+		_hud_mira._label_prompt.text, "(%s)  Tirer la poignée droite" % TouchesJoueur.interagir(2))
 
 	var hauteur_avant: float = _puzzle.get_node("Porte").position.y
 	await _appuyer("joueur2_interagir")

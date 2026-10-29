@@ -26,6 +26,8 @@ const COULEUR_EAU      = Color(0.25, 0.45, 0.60)
 
 # Le décor (toits, arbres, props…) vit dans son propre fichier.
 const DecorVillage = preload("res://scripts/zones/decor_village.gd")
+# Nom de la touche « interagir » de chaque joueur (E / Entrée / A), pour le texte du choix.
+const TouchesJoueur = preload("res://scripts/ui/touches_joueur.gd")
 
 # ── Les bâtiments ─────────────────────────────────────────────────────────────
 #
@@ -89,11 +91,16 @@ static func emprise(entree: Dictionary) -> Vector3:
 
 var _attente_choix: bool  = false
 var _stele_lue: bool      = false
-var _choix_affiche: bool  = false
 var _grimoire_annonce: bool = false  # l'indice du grimoire n'est donné qu'une fois
+var _grimoire_ouvert: bool = false   # le grimoire ne se lit qu'une fois
+
+# L'indice donné quand les trois puzzles sont résolus (lu aussi par test_parcours_complet).
+const INDICE_GRIMOIRE: Array[String] = [
+	"Au-delà de la porte du nord, dans la vieille maison de pierre, quelque chose brille.",
+	"Une latte du plancher, à peine soulevée. Comme si on l'avait laissée ainsi exprès."
+]
 
 func _ready() -> void:
-	set_process(false)
 	_construire_village()
 	_habiller_le_village()
 	_coloriser_puzzles()
@@ -443,8 +450,8 @@ func _connecter_puzzles() -> void:
 	zone_stele.body_entered.connect(_sur_entree_stele)
 
 # Le message de résolution de chaque puzzle est affiché par le script du
-# puzzle lui-même : DialogueManager.afficher() REMPLACE le dialogue en cours,
-# un second message ici l'écraserait dans la même frame.
+# puzzle lui-même. (DialogueManager met les messages en file d'attente : un
+# second message ici ne l'écraserait plus, mais il ferait doublon.)
 func _sur_puzzle1_resolu() -> void:
 	_verifier_fin_de_zone()
 
@@ -461,20 +468,24 @@ func _verifier_fin_de_zone() -> void:
 		return
 	_grimoire_annonce = true
 	# On laisse retomber l'émotion du dernier puzzle…
-	await get_tree().create_timer(3.0).timeout
-	# … et on attend que son message soit lu, pour ne pas l'écraser.
-	while DialogueManager.est_actif():
-		await DialogueManager.dialogue_fini
-	DialogueManager.afficher("", [
-		"Au-delà de la porte du nord, dans la vieille maison de pierre, quelque chose brille.",
-		"Une latte du plancher, à peine soulevée. Comme si on l'avait laissée ainsi exprès."
-	])
+	# (2e argument false : la minuterie S'ARRÊTE pendant la pause du jeu.)
+	await get_tree().create_timer(3.0, false).timeout
+	# … puis l'indice. S'il reste un message du puzzle à l'écran, celui-ci
+	# attend son tour dans la file du DialogueManager.
+	DialogueManager.afficher("", INDICE_GRIMOIRE)
 	zone_grimoire.monitoring = true
 
 func _sur_entree_grimoire(body: Node3D) -> void:
 	if not body.is_in_group("joueurs"):
 		return
-	zone_grimoire.monitoring = false
+	# Garde-fou : Godot refuse qu'on change `monitoring` PENDANT le signal
+	# body_entered (l'ancien code échouait, et le grimoire se relançait à
+	# chaque entrée). On le coupe donc « en différé », à la fin de l'image,
+	# et le booléen empêche toute seconde lecture d'ici là.
+	if _grimoire_ouvert:
+		return
+	_grimoire_ouvert = true
+	zone_grimoire.set_deferred("monitoring", false)
 	_declencher_grimoire()
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -482,7 +493,7 @@ func _sur_entree_grimoire(body: Node3D) -> void:
 # ──────────────────────────────────────────────────────────────────────────────
 
 func _declencher_grimoire() -> void:
-	DialogueManager.afficher("Grimoire d'Aelindra", [
+	var numero := DialogueManager.afficher("Grimoire d'Aelindra", [
 		"Sous la latte, un grimoire enveloppé de lin. L'écriture penchée de votre mère.",
 		"« Pour Kael et Mira, si un jour ces pages vous trouvent. »",
 		"« Avant d'être votre mère, j'étais la Tisserande : celle qui tient les fils des peuples.",
@@ -492,39 +503,33 @@ func _declencher_grimoire() -> void:
 		"« Je pars recoudre ce que j'ai défait. Ne me cherchez pas trop vite.",
 		"« Ce que vous ferez de ce secret, décidez-le ensemble. C'est le seul conseil que j'aie. »"
 	])
-	# Attend la fin de la lecture (le joueur clique à travers toutes les lignes)
-	await DialogueManager.dialogue_fini
-	# Petit délai pour que le bouton soit relâché (évite le double-input)
-	await get_tree().create_timer(0.4).timeout
+	# Attend la fin de CETTE lecture (le joueur clique à travers toutes les lignes).
+	await DialogueManager.attendre_fin(numero)
+
+	# Le choix : les deux options sont affichées ENSEMBLE, et c'est le
+	# DialogueManager qui lit le bouton (règle d'or : aucun autre script ne lit
+	# « interagir »). Il ignore les appuis pendant ses premières 0,8 s, pour
+	# qu'un joueur qui tapote A pour lire ne choisisse pas sans le vouloir.
 	_attente_choix = true
-	set_process(true)
+	DialogueManager.proposer_choix("Grimoire d'Aelindra",
+		"Parlez-en d'abord.\nGarder le grimoire entre vous : Kael (%s)   ·   Le confier au village : Mira (%s)"
+		% [TouchesJoueur.interagir(1), TouchesJoueur.interagir(2)])
+	var id_joueur: int = await DialogueManager.choix_fait
+	_appliquer_choix("secret" if id_joueur == 1 else "partager")
 
-func _process(_delta: float) -> void:
-	if not _attente_choix:
-		return
-	# Lire l'input en priorité (avant de re-afficher pour éviter les conflits)
-	if Input.is_action_just_pressed("joueur1_interagir"):
-		_appliquer_choix("secret")
-		return
-	if Input.is_action_just_pressed("joueur2_interagir"):
-		_appliquer_choix("partager")
-		return
-	# Re-afficher le choix dès que le panneau est fermé (loop jusqu'au choix)
-	if not DialogueManager._panneau.visible:
-		DialogueManager.afficher("", [
-			"Garder le grimoire entre vous : Kael (A)   ·   Le confier au village : Mira (A)",
-			"Parlez-en d'abord. Garder le secret : Kael (A)   ·   Le partager : Mira (A)"
-		])
-
+# Kael (joueur 1) = garder le secret, Mira (joueur 2) = partager.
+# Appelée aussi directement par test_fin_zone.gd.
 func _appliquer_choix(choix: String) -> void:
+	if GameManager.choix_grimoire != "":
+		return   # le choix est irréversible
 	_attente_choix = false
-	set_process(false)
 	GameManager.choix_grimoire = choix
 
+	var numero := 0
 	if choix == "secret":
 		GameManager.modifier_moralite_kael(-10)
 		GameManager.modifier_moralite_mira(-10)
-		DialogueManager.afficher("", [
+		numero = DialogueManager.afficher("", [
 			"Vous refermez le grimoire. Il ne quittera plus votre sac.",
 			"Kael s'éveille à la Résonance.",
 			"Mira apprend l'Ancrage."
@@ -532,7 +537,7 @@ func _appliquer_choix(choix: String) -> void:
 	else:
 		GameManager.modifier_moralite_kael(10)
 		GameManager.modifier_moralite_mira(10)
-		DialogueManager.afficher("", [
+		numero = DialogueManager.afficher("", [
 			"Vous emportez le grimoire jusqu'à la place. Sylvara se tait, puis se souvient.",
 			"Kael s'éveille à la Mémoire des Anciens.",
 			"Mira apprend la Lecture."
@@ -540,7 +545,7 @@ func _appliquer_choix(choix: String) -> void:
 
 	# Quand ce dernier dialogue est lu, la zone est finie : main.gd prend le
 	# relais (fondu au noir, texte de fin, crédits, retour au menu).
-	await DialogueManager.dialogue_fini
+	await DialogueManager.attendre_fin(numero)
 	GameManager.annoncer_fin_zone1()
 
 # ──────────────────────────────────────────────────────────────────────────────

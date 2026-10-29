@@ -80,3 +80,7 @@ func reinitialiser() -> void:
 	moralite_mira = 0
 	# Passe par la fonction pour que les HUD effacent leur message.
 	definir_etat_coop("")
+	# L'InteractionManager (AutoLoad lui aussi) oublie les objets de l'ancienne
+	# partie, et redevient actif s'il était resté suspendu.
+	InteractionManager.vider()
+	InteractionManager.reprendre()

@@ -10,8 +10,10 @@
 #   4. Puzzle 2          — oiseau : Mira trop lente → reset, puis réussite
 #   5. Puzzle 3          — roue d'eau : Kael seul / lanterne éteinte échouent,
 #                          puis lanterne + lianes → résolu
-#   6. Grimoire          — apparaît, se lit jusqu'au bout, choix, GameManager
-#   7. Nouvelle partie   — GameManager est-il remis à zéro ?
+#   6. Grimoire          — apparaît, se lit jusqu'au bout, choix, GameManager,
+#                          puis écran de fin → crédits → retour au menu
+#   7. Nouvelle partie   — « Commencer » au menu : GameManager, dialogues et
+#                          InteractionManager repartent de zéro
 #
 # COMMENT ON SIMULE LES JOUEURS
 #   - On TÉLÉPORTE Kael et Mira, mais jamais dans un mur : _placer_dans()
@@ -29,13 +31,22 @@
 #           Non compté par défaut — avec `-- --strict`, chaque BUG compte comme
 #           un ECHEC (utile quand les correctifs sont fusionnés).
 #
-# Lancer (≈ 90 s, le Puzzle 2 attend deux fois ses 12 secondes) :
-#   godot --headless --path . res://tools/tests/test_parcours_complet.tscn --quit-after 30000
+# TEXTES : on ne recopie pas les phrases du scénariste (elles changent). On
+# compare aux constantes du code (zone1.INDICE_GRIMOIRE, TextesNarration…) ou
+# on vérifie qu'un message nomme le bon jumeau / le bon objet.
+#
+# Lancer (≈ 2 min 30 : le Puzzle 2 attend deux fois ses 12 secondes, puis la fin) :
+#   godot --headless --path . res://tools/tests/test_parcours_complet.tscn --quit-after 200000
 # Options :
 #   -- --strict            les BUG comptent comme des ECHEC
 #   -- --choix=secret      Kael fait le choix du grimoire (par défaut : Mira, "partager")
 
 extends Node
+
+# Nom de la touche « interagir » affiché pour chaque joueur (E / Entrée / A).
+const TouchesJoueur = preload("res://scripts/ui/touches_joueur.gd")
+const SCENE_MENU := "res://scenes/menu_principal.tscn"
+const SCENE_MAIN := "res://scenes/main.tscn"
 
 var _echecs: int = 0
 var _bugs: int = 0
@@ -56,6 +67,10 @@ var _p3: Node3D
 # simulé est bien arrivé jusqu'au skill.
 var _cornes: int = 0
 var _lianes: int = 0
+# Toutes les lignes de dialogue affichées depuis le début (signal ligne_affichee).
+# Avec la file d'attente du DialogueManager, un message peut s'afficher un peu
+# plus tard que l'action qui l'a provoqué : on vérifie qu'il est PASSÉ à l'écran.
+var _lignes_vues: Array[String] = []
 
 func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
@@ -115,6 +130,7 @@ func _etape_demarrage() -> bool:
 	_p3 = _zone.get_node("Puzzle3RoueEau")
 	_kael.corne_sonnee.connect(func(): _cornes += 1)
 	_kael.lianes_invoquees.connect(func(_p): _lianes += 1)
+	DialogueManager.ligne_affichee.connect(func(): _lignes_vues.append(DialogueManager._label_texte.text))
 
 	_verifier("GameManager part de zero",
 		str([GameManager.puzzle1_resolu, GameManager.puzzle2_resolu, GameManager.puzzle3_resolu,
@@ -154,9 +170,10 @@ func _etape_controles_sans_pnj() -> void:
 	await _skill("joueur1_skill1")   # Kael : brassards
 	_verifier("Les brassards de Kael repondent (appui X)", str(_lianes), "1")
 	_verifier("Sans Brennan, la roue NE tourne PAS", str(_p3.resolu), "false")
-	_constater("Sans Brennan, le joueur recoit un retour (dialogue ou message)",
-		dialogue_lanterne or DialogueManager.est_actif() or GameManager.etat_coop != "",
-		"silence total : puzzle_roue_eau.gd:58-64 et :78-80 font `return` sans rien dire — le joueur croit que la lanterne / les brassards ne marchent pas")
+	_verifier("Sans Brennan, le joueur recoit un retour (dialogue ou message)",
+		str(dialogue_lanterne or DialogueManager.est_actif() or GameManager.etat_coop != ""), "true")
+	_verifier("Sans Brennan, le message oriente vers le meunier",
+		str(_vu("Brennan")), "true")
 	await _skill("joueur2_skill2")   # on éteint
 	await _fermer_dialogues()
 
@@ -164,12 +181,16 @@ func _etape_controles_sans_pnj() -> void:
 	await _placer_pres_oiseau(_kael)
 	await _skill("joueur1_skill2")   # corne
 	_verifier("La corne de Kael repond (appui Y)", str(_cornes), "1")
-	_constater("Sans Lira, l'oiseau ne repond pas encore (prerequis du design)",
-		not _p2.oiseau_attire,
-		"l'oiseau vole sans qu'on ait parle a Lira : GAME_DESIGN (Puzzle 2, Prerequis) n'est pas implemente (puzzle_oiseau.gd:79)")
+	if _p2.EXIGER_LIRA:
+		_verifier("Sans Lira, l'oiseau ne repond pas encore (prerequis du design)",
+			str(_p2.oiseau_attire), "false")
+		_verifier("Sans Lira, un message oriente vers elle", str(_vu("Lira")), "true")
+	else:
+		print("  INFO : prerequis de Lira desactive (puzzle_oiseau.gd EXIGER_LIRA = false)")
 	if _p2.oiseau_attire:
 		# On profite du cycle lancé pour vérifier le reset « Mira trop lente ».
 		await _cycle_oiseau_trop_lent()
+	await _fermer_dialogues()
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 2. PNJ
@@ -202,9 +223,8 @@ func _etape_pnj() -> void:
 	if not DialogueManager.est_actif():
 		_diagnostic()
 	await _placer_dans(_mira, _zone.get_node("ZoneStele"))
-	_constater("La stele n'ecrase pas un dialogue deja ouvert",
-		DialogueManager._label_nom.text == "Caeryn",
-		"la stele remplace le dialogue de Caeryn en plein milieu (zone1.gd:316-328 appelle afficher() sans verifier est_actif()) ; meme chose possible pendant le grimoire")
+	_verifier("La stele n'ecrase pas un dialogue deja ouvert (elle attend son tour)",
+		DialogueManager._label_nom.text, "Caeryn")
 	await _fermer_dialogues()
 	await _eloigner(_kael)
 	await _eloigner(_mira)
@@ -249,7 +269,7 @@ func _etape_puzzle1() -> void:
 
 	# Kael seul
 	await _placer_dans(_kael, poignee_k)
-	_verifier("Prompt de Kael sur sa poignee", _prompt(_hud_kael), "(A)  Tirer la poignée gauche")
+	_verifier("Prompt de Kael sur sa poignee", _prompt(_hud_kael), "(%s)  Tirer la poignée gauche" % TouchesJoueur.interagir(1))
 	await _appuyer("joueur1_interagir")
 	_verifier("Kael tient sa poignee", str(_p1.kael_pret), "true")
 	await _attendre(2.0)
@@ -273,9 +293,9 @@ func _etape_puzzle1() -> void:
 	await _placer_dans(_kael, poignee_k)
 	await _placer_dans(_mira, poignee_m)
 	await _appuyer_les_deux()
-	_constater("Appui simultane : les DEUX poignees sont prises",
-		_p1.kael_pret and _p1.mira_prete,
-		"seule la poignee de Kael est prise, l'appui de Mira est perdu (interaction_manager.gd:80-84 fait `return` apres la premiere interaction de la frame, meme si l'autre joueur vise un AUTRE objet)")
+	# Une fois les deux prises, la porte s'ouvre aussitôt : `resolu` le prouve.
+	_verifier("Appui simultane : les DEUX poignees sont prises (la porte s'ouvre)",
+		str(_p1.resolu), "true")
 	if not _p1.resolu:
 		await _fermer_dialogues()
 		if not _p1.kael_pret:
@@ -286,9 +306,8 @@ func _etape_puzzle1() -> void:
 	_verifier("Puzzle 1 resolu", str(_p1.resolu), "true")
 	_verifier("GameManager.puzzle1_resolu", str(GameManager.puzzle1_resolu), "true")
 	_verifier("Etat coop efface", GameManager.etat_coop, "")
-	_constater("Le message du puzzle ('La porte grince et s'ouvre lentement...') reste lisible",
-		DialogueManager._label_texte.text == "La porte grince et s'ouvre lentement...",
-		"il est ecrase dans la meme frame par celui de zone1.gd:230 ('%s')" % DialogueManager._label_texte.text)
+	_verifier("Le message du puzzle (la porte qui se leve) reste lisible",
+		str(DialogueManager.est_actif() and DialogueManager._label_texte.text.contains("porte")), "true")
 	await _attendre(2.0)
 	_verifier("La porte est montee de 3.5 m", str(porte.position.y > y_porte + 3.4), "true")
 	_verifier("Les poignees n'affichent plus de prompt", str(InteractionManager.cible_pour(1) == poignee_k), "false")
@@ -311,8 +330,9 @@ func _etape_puzzle2() -> void:
 	_verifier("Grille fermee : pas de prompt sur le verrou",
 		str(InteractionManager.cible_pour(2) == verrou), "false")
 
-	# La corne ne marche qu'à 8 m de l'oiseau, perché à 7.8 m de haut
+	# La corne porte à PORTEE_CORNE mètres, mesurés au sol
 	_mesurer_zone_corne()
+	await _corne_hors_de_portee()
 
 	if not _reset_oiseau_verifie:
 		await _placer_pres_oiseau(_kael)
@@ -330,8 +350,10 @@ func _etape_puzzle2() -> void:
 	_verifier("L'oiseau se pose et la grille s'ouvre", str(ouverte), "true")
 	if not ouverte:
 		return
-	_verifier("Compte a rebours affiche aux deux joueurs",
-		str(GameManager.etat_coop.begins_with("Le passage se referme dans")), "true")
+	# L'état coop (pas un dialogue : il bloquerait le verrou) appelle Mira.
+	_verifier("L'ouverture est annoncee aux deux joueurs par l'etat coop, qui appelle Mira",
+		str(GameManager.etat_coop.contains("Mira")), "true")
+	_verifier("Aucun dialogue ne bloque le verrou pendant les 12 s", str(DialogueManager.est_actif()), "false")
 
 	# Relancer le puzzle pendant le compte à rebours ne doit rien casser
 	await _attendre(1.0)
@@ -339,18 +361,21 @@ func _etape_puzzle2() -> void:
 	await _skill("joueur1_skill2")
 	_verifier("Corne pendant le compte a rebours : la minuterie n'est pas relancee",
 		str(_p2._minuterie_fermeture <= minuterie_avant), "true")
+	await _attendre(1.2)
+	_verifier("Puis le compte a rebours en secondes",
+		str(GameManager.etat_coop.contains(" s ")), "true")
 
-	# Mira est déjà au verrou (on peut contourner la grille, voir étape 0).
-	# Un joueur appuie UNE fois sur A en voyant « Mira, dépêche-toi ! ».
-	await _attendre(0.2)
+	# Mira passe sous la grille levée et rejoint le verrou.
+	await _placer_dans(_mira, verrou)
+	_verifier("Le prompt du verrou est visible pour Mira",
+		_prompt(_hud_mira), "(%s)  Verrouiller le passage" % TouchesJoueur.interagir(2))
 	await _appuyer("joueur2_interagir")
-	_constater("Un seul appui de Mira au verrou suffit pendant le compte a rebours",
-		_p2.verrou_active,
-		"le premier appui ne fait que fermer le dialogue 'Mira, depeche-toi !' (puzzle_oiseau.gd:92) : tant qu'un dialogue est ouvert, InteractionManager ignore le verrou et le HUD masque le prompt — on perd du temps sur les 12 s")
+	_verifier("Un seul appui de Mira au verrou suffit pendant le compte a rebours",
+		str(_p2.verrou_active), "true")
 	if not _p2.verrou_active:
 		await _fermer_dialogues("joueur2_interagir")
 		_verifier("Apres le dialogue, le prompt du verrou est visible pour Mira",
-			_prompt(_hud_mira), "(A)  Verrouiller le passage")
+			_prompt(_hud_mira), "(%s)  Verrouiller le passage" % TouchesJoueur.interagir(2))
 		await _appuyer("joueur2_interagir")
 
 	_verifier("Puzzle 2 resolu (verrou dans les 12 s)", str(_p2.resolu), "true")
@@ -384,23 +409,47 @@ func _cycle_oiseau_trop_lent() -> void:
 	await _fermer_dialogues()
 
 # Combien de sol libre permet à Kael d'atteindre l'oiseau avec sa corne ?
+# La portée se mesure à l'horizontale (puzzle_oiseau.gd → _distance_au_sol).
 func _mesurer_zone_corne() -> void:
 	var oiseau: Vector3 = _p2.get_node("Oiseau").global_position
-	var pas := 0.2
+	var portee: float = _p2.PORTEE_CORNE
+	var pas := 0.25
 	var n := 0
-	var x := -8.0
-	while x <= 8.0:
-		var z := -8.0
-		while z <= 8.0:
+	var x := -portee
+	while x <= portee:
+		var z := -portee
+		while z <= portee:
 			var pied := Vector3(oiseau.x + x, _sol_y(), oiseau.z + z)
-			if pied.distance_to(oiseau) <= 8.0 and _libre(pied):
+			if Vector2(x, z).length() <= portee and _libre(pied):
 				n += 1
 			z += pas
 		x += pas
 	var surface: float = n * pas * pas
-	_constater("La corne s'utilise depuis une zone de sol confortable (> 4 m2)",
-		surface > 4.0,
-		"seulement %.1f m2 de sol, colles au mur sud de la maison : l'oiseau est a 7.8 m de haut pour une portee de 8 m (kael.gd PORTEE_CORNE / puzzle_oiseau.gd:84), et la corne hors portee ne dit rien" % surface)
+	_verifier("La corne s'utilise depuis une zone de sol confortable (> 4 m2, %.0f m2 mesures)" % surface,
+		str(surface > 4.0), "true")
+
+# Kael sonne trop loin de l'oiseau (mais près du puzzle) : un message le guide.
+func _corne_hors_de_portee() -> void:
+	var oiseau: Vector3 = _p2.get_node("Oiseau").global_position
+	var distance: float = (_p2.PORTEE_CORNE + _p2.DISTANCE_INDICE) * 0.5
+	var pied := Vector3.INF
+	# On cherche un point libre à `distance` mètres, en tournant autour de l'oiseau.
+	for i in 24:
+		var angle: float = TAU * i / 24.0
+		var essai := Vector3(oiseau.x + sin(angle) * distance, _sol_y(), oiseau.z + cos(angle) * distance)
+		if _libre(essai, _kael):
+			pied = essai
+			break
+	if pied == Vector3.INF:
+		print("  INFO : aucun point libre a %.0f m de l'oiseau, controle 'hors de portee' saute" % distance)
+		return
+	await _teleporter(_kael, pied)
+	var vues_avant: int = _lignes_vues.size()
+	await _skill("joueur1_skill2")
+	_verifier("Corne hors de portee : l'oiseau ne bouge pas", str(_p2.oiseau_attire), "false")
+	_verifier("Corne hors de portee : un message dit a Kael de s'approcher",
+		str(_lignes_vues.slice(vues_avant).any(func(l): return l.contains("approche"))), "true")
+	await _fermer_dialogues()
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 5. PUZZLE 3 — LA ROUE D'EAU
@@ -417,32 +466,33 @@ func _etape_puzzle3() -> void:
 	await _placer_dans(_kael, zone_lianes)
 	await _skill("joueur1_skill1")
 	_verifier("NEGATIF : Kael seul (Mira absente) ne fait pas tourner la roue", str(_p3.resolu), "false")
-	_verifier("Kael seul : un indice appelle Mira",
-		DialogueManager._label_texte.text, "Kael sent l'endroit... Mira, viens voir avec ta Lanterne !")
+	_verifier("Kael seul : un indice appelle Mira et sa Lanterne",
+		str(DialogueManager._label_texte.text.contains("Mira") and DialogueManager._label_texte.text.contains("Lanterne")), "true")
 	await _fermer_dialogues()
 
 	# Mira dans la zone mais lanterne éteinte
 	await _placer_dans(_mira, zone_lanterne)
 	await _skill("joueur1_skill1")
 	_verifier("NEGATIF : lanterne eteinte, la roue ne tourne pas", str(_p3.resolu), "false")
-	_verifier("Lanterne eteinte : indice 'quelque chose manque'",
-		DialogueManager._label_texte.text, "Kael sent l'endroit... mais quelque chose manque.")
+	_verifier("Lanterne eteinte : l'indice reclame la Lanterne",
+		str(DialogueManager._label_texte.text.contains("Lanterne")), "true")
 	await _fermer_dialogues()
 
 	# Lanterne allumée AVANT d'entrer dans la zone, puis Mira entre
 	await _eloigner(_mira)
 	await _skill("joueur2_skill2")
 	await _placer_dans(_mira, zone_lanterne)
-	_constater("Mira entre dans la zone lanterne deja allumee : l'echo apparait",
-		echo.visible,
-		"l'echo ne s'affiche qu'au moment ou on ALLUME la lanterne dans la zone (puzzle_roue_eau.gd:78-89 ecoute lanterne_activee, pas l'entree dans ZoneLanterne)")
+	_verifier("Mira entre dans la zone lanterne deja allumee : l'echo apparait",
+		str(echo.visible), "true")
 	await _skill("joueur2_skill2")   # éteint
 	await _fermer_dialogues()
 
 	# Le bon geste : Mira allume dans la zone, Kael fait pousser
 	await _skill("joueur2_skill2")
 	_verifier("Lanterne allumee dans la zone : l'echo de la liane apparait", str(echo.visible), "true")
-	_verifier("Mira recoit l'indice de l'echo", str(DialogueManager._label_texte.text.begins_with("Mira voit l'écho")), "true")
+	_verifier("Mira recoit l'indice de l'echo (la liane fantome)",
+		str(DialogueManager._label_texte.text.contains("liane")), "true")
+	await _fermer_dialogues()
 	await _skill("joueur1_skill1")
 	_verifier("Puzzle 3 resolu", str(_p3.resolu), "true")
 	_verifier("GameManager.puzzle3_resolu", str(GameManager.puzzle3_resolu), "true")
@@ -450,11 +500,12 @@ func _etape_puzzle3() -> void:
 
 	# Après la résolution, rallumer la lanterne ne doit plus rien raconter
 	await _attendre(0.3)
+	var vues_avant: int = _lignes_vues.size()
 	await _skill("joueur2_skill2")   # éteint
 	await _skill("joueur2_skill2")   # rallume
-	_constater("Apres resolution, la lanterne ne fait plus reapparaitre l'echo",
-		not echo.visible and not DialogueManager._label_texte.text.begins_with("Mira voit"),
-		"l'echo revient et Mira redit 'Il faut faire pousser une liane' (puzzle_roue_eau.gd:78 ne teste pas `resolu`) — ce dialogue peut aussi ECRASER le grimoire si Mira joue avec sa lanterne pendant que Kael le lit")
+	await _attendre(0.3)
+	_verifier("Apres resolution, la lanterne ne fait plus reapparaitre l'echo",
+		str(echo.visible or _lignes_vues.slice(vues_avant).any(func(l): return l.contains("fantôme"))), "false")
 	await _skill("joueur2_skill2")   # éteint
 	await _eloigner(_mira)
 
@@ -463,16 +514,24 @@ func _etape_puzzle3() -> void:
 # ══════════════════════════════════════════════════════════════════════════════
 
 func _etape_grimoire() -> void:
-	print("--- 6. Grimoire et choix ---")
+	print("--- 6. Grimoire, choix et ecran de fin ---")
 	var zone_grimoire: Area3D = _zone.get_node("ZoneGrimoire")
 	if not GameManager.zone1_terminee():
 		_verifier("Prerequis grimoire : zone terminee", "false", "true")
 		return
 
+	# main.tscn est ici un ENFANT du test. À la fin, main.gd appelle
+	# change_scene_to_file(menu), qui détruit la « scène courante ». On en
+	# fait un leurre : c'est lui qui sera détruit, pas ce test.
+	var leurre := Node.new()
+	leurre.name = "Leurre"
+	get_tree().root.add_child(leurre)
+	get_tree().current_scene = leurre
+
 	var annonce := await _attendre_que(func(): return zone_grimoire.monitoring, 6.0)
 	_verifier("Le grimoire s'active ~3 s apres le dernier puzzle", str(annonce), "true")
-	_verifier("Une annonce indique ou chercher",
-		DialogueManager._label_texte.text, "Quelque chose brille dans la vieille maison au nord...")
+	var indice_vu := await _attendre_que(func(): return _lignes_vues.has(_zone.INDICE_GRIMOIRE[0]), 15.0, true)
+	_verifier("Une annonce indique ou chercher (zone1.INDICE_GRIMOIRE)", str(indice_vu), "true")
 	await _fermer_dialogues()
 
 	# Kael entre dans la vieille maison
@@ -482,43 +541,46 @@ func _etape_grimoire() -> void:
 	_verifier("Le grimoire s'ouvre en entrant dans la zone", str(ouvert), "true")
 	if not ouvert:
 		return
+	var premiere_ligne: String = DialogueManager._label_texte.text
 	var nb_lignes: int = DialogueManager._lignes.size()
-	var appuis := await _lire_jusquau_bout("joueur1_interagir")
+	# On s'arrête dès que le choix apparaît (sinon on appuierait dedans).
+	var appuis := await _lire_jusquau_bout("joueur1_interagir", true)
 	_verifier("Grimoire lu jusqu'au bout (%d lignes)" % nb_lignes, str(appuis), str(nb_lignes))
 
-	# Le choix s'affiche après un court délai
-	var choix_affiche := await _attendre_que(func(): return _zone._attente_choix and DialogueManager.est_actif(), 2.0)
+	# Le choix s'affiche aussitôt, les DEUX options ensemble
+	var choix_affiche := await _attendre_que(func(): return _zone._attente_choix and _choix_en_cours(), 2.0)
 	_verifier("La question du choix s'affiche", str(choix_affiche), "true")
-	_verifier("Texte du choix", DialogueManager._label_texte.text, "Joueur 1 (A) → Garder le secret entre vous")
-	_constater("Le texte du choix nomme la bonne touche pour chaque joueur",
-		false,
-		"'Joueur 1 (A)' / 'Joueur 2 (A)' : au clavier Kael interagit avec E, et la ligne 2 du choix n'apparait qu'apres un appui — or tout appui EST deja un choix (zone1.gd:285-288)")
-
-	# Ré-entrer dans la zone ne relance pas le grimoire
-	await _eloigner(_kael)
-	await _placer_dans(_kael, zone_grimoire)
-	_verifier("Re-entrer dans la vieille maison ne relance pas le grimoire",
-		DialogueManager._label_nom.text == "Grimoire d'Aelindra", false)
+	var texte_choix: String = DialogueManager._label_texte.text
+	_verifier("Les deux options sont affichees ensemble",
+		str(texte_choix.contains("Garder") and texte_choix.contains("confier")), "true")
+	_verifier("Le texte du choix nomme la bonne touche pour chaque joueur",
+		str(texte_choix.contains("Kael (%s)" % TouchesJoueur.interagir(1))
+			and texte_choix.contains("Mira (%s)" % TouchesJoueur.interagir(2))), "true")
 
 	# Choix fait presque aussitôt (0.1 s) : un joueur qui « tapote A » pour lire
 	await _attendre(0.1)
 	var id_choix: int = 1 if _choix_voulu == "secret" else 2
 	await _appuyer("joueur%d_interagir" % id_choix)
-	_constater("Un appui 0.1 s apres l'affichage de la question n'est PAS pris pour un choix",
-		GameManager.choix_grimoire == "",
-		"le choix est accepte instantanement (zone1.gd:277-282 ignore DELAI_MIN) : un joueur qui tapote A pour lire le grimoire choisit sans avoir lu la question, et la decision est irreversible")
-	if GameManager.choix_grimoire == "":
-		# Comportement corrigé : on laisse passer le délai et on choisit vraiment.
-		await _attendre(0.8)
-		await _appuyer("joueur%d_interagir" % id_choix)
+	_verifier("Un appui 0.1 s apres l'affichage de la question n'est PAS pris pour un choix",
+		GameManager.choix_grimoire, "")
+
+	# Ré-entrer dans la zone ne relance pas le grimoire
+	await _eloigner(_kael)
+	await _placer_dans(_kael, zone_grimoire)
+	_verifier("Re-entrer dans la vieille maison ne relance pas le grimoire",
+		str(_choix_en_cours() and DialogueManager._label_texte.text != premiere_ligne), "true")
+
+	# Le vrai choix, après le délai de protection
+	await _attendre(0.8)
+	await _appuyer("joueur%d_interagir" % id_choix)
 	_verifier("Choix enregistre", GameManager.choix_grimoire, _choix_voulu)
 	var attendu_moralite: int = -10 if _choix_voulu == "secret" else 10
 	_verifier("Moralite de Kael", str(GameManager.moralite_kael), str(attendu_moralite))
 	_verifier("Moralite de Mira", str(GameManager.moralite_mira), str(attendu_moralite))
 	_verifier("Le choix n'est plus attendu", str(_zone._attente_choix), "false")
-	var premiere: String = "Vous refermez le grimoire. C'est entre vous." if _choix_voulu == "secret" \
-		else "Vous partagez la nouvelle avec les villageois."
-	_verifier("Le dialogue de consequence s'affiche", DialogueManager._label_texte.text, premiere)
+	var mot_cle: String = "refermez" if _choix_voulu == "secret" else "emportez"
+	_verifier("Le dialogue de consequence s'affiche ('%s')" % mot_cle,
+		str(DialogueManager._label_texte.text.contains(mot_cle)), "true")
 	_verifier("La barre de moralite de Kael apparait", str(_hud_kael._bloc_moralite.modulate.a > 0.0 or _hud_kael._temps_restant > 0.0), "true")
 
 	# Un second appui (l'autre joueur) ne change plus rien
@@ -527,40 +589,77 @@ func _etape_grimoire() -> void:
 	_verifier("Le second joueur ne peut plus changer le choix", GameManager.choix_grimoire, _choix_voulu)
 	await _fermer_dialogues()
 	await _attendre(0.5)
-	_verifier("Le choix n'est pas reproposé apres la conclusion", str(DialogueManager.est_actif()), "false")
+	_verifier("Le choix n'est pas repropose apres la conclusion", str(DialogueManager.est_actif()), "false")
 	_verifier("Puzzles + choix dans GameManager",
 		str([GameManager.puzzle1_resolu, GameManager.puzzle2_resolu, GameManager.puzzle3_resolu, GameManager.choix_grimoire]),
 		str([true, true, true, _choix_voulu]))
 
-	# TODO (développeur — écran de fin) : une fois l'écran de fin livré, vérifier ici :
-	#   1. qu'il apparaît après le dialogue de conséquence (textes de
-	#      TextesNarration.FIN_SECRET / FIN_PARTAGE selon _choix_voulu, puis FIN_COMMUNE) ;
-	#   2. qu'il se termine (appui ou délai) et ramène au menu principal :
-	#      get_tree().current_scene.scene_file_path == "res://scenes/menu_principal.tscn"
-	#      (attention : ce test instancie main.tscn comme ENFANT, il faudra donc
-	#      soit lancer via change_scene_to_file, soit observer le signal de l'écran de fin) ;
-	#   3. aucun dialogue resté ouvert dans DialogueManager après le retour au menu.
-	print("  INFO : ecran de fin -> retour menu pas encore teste (TODO, arrive avec le developpeur)")
+	# ── Écran de fin → crédits → retour au menu ──────────────────────────────
+	var fin_lancee := await _attendre_que(func(): return _scene.ecran_narration != null, 5.0)
+	_verifier("L'ecran de fin apparait apres le dialogue de consequence", str(fin_lancee), "true")
+	if not fin_lancee:
+		return
+	_verifier("InteractionManager suspendu pendant la fin", str(InteractionManager.est_suspendu()), "true")
+	# On passe les lignes (interagir) et on note tout ce qui s'affiche.
+	var textes_fin: Array[String] = []
+	var debut := Time.get_ticks_msec()
+	var dernier_appui := debut
+	while Time.get_ticks_msec() - debut < 180000:
+		var scene := get_tree().current_scene
+		if scene != null and scene.scene_file_path == SCENE_MENU:
+			break
+		if is_instance_valid(_scene) and _scene.ecran_narration != null:
+			var t: String = _scene.ecran_narration.texte_affiche()
+			if t != "" and not textes_fin.has(t):
+				textes_fin.append(t)
+		if Time.get_ticks_msec() - dernier_appui > 500:
+			dernier_appui = Time.get_ticks_msec()
+			await _appuyer("joueur1_interagir")
+		else:
+			await get_tree().process_frame
+	var fin_choix: Array[String] = TextesNarration.FIN_SECRET if _choix_voulu == "secret" else TextesNarration.FIN_PARTAGE
+	_verifier("Texte de fin du choix '%s'" % _choix_voulu, str(textes_fin.has(fin_choix[0])), "true")
+	_verifier("Puis le texte commun", str(textes_fin.has(TextesNarration.FIN_COMMUNE[0])), "true")
+	var menu = get_tree().current_scene
+	_verifier("La fin ramene au menu principal",
+		menu.scene_file_path if menu != null else "(aucune scene)", SCENE_MENU)
+	_verifier("Aucun dialogue ouvert au menu", str(DialogueManager.est_actif()), "false")
+	# L'ancienne partie (enfant du test) disparaît, comme en vrai jeu.
+	_scene.queue_free()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_verifier("InteractionManager actif au menu", str(InteractionManager.est_suspendu()), "false")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 7. NOUVELLE PARTIE
 # ══════════════════════════════════════════════════════════════════════════════
 
-# Le futur « retour menu → Commencer » recharge main.tscn sans relancer le jeu.
-# Les AutoLoads, eux, survivent au changement de scène.
+# Au menu, « Commencer » : exactement le chemin du vrai jeu (GameManager.
+# reinitialiser() puis change_scene_to_file(main)).
 func _etape_nouvelle_partie() -> void:
-	print("--- 7. Nouvelle partie (rechargement de main.tscn) ---")
-	_scene.queue_free()
-	await get_tree().process_frame
-	_scene = load("res://scenes/main.tscn").instantiate()
-	add_child(_scene)
-	await get_tree().process_frame
-	await get_tree().process_frame
-	_constater("Une nouvelle partie repart avec un GameManager vierge",
-		not GameManager.puzzle1_resolu and GameManager.choix_grimoire == "" and GameManager.moralite_kael == 0,
-		"GameManager garde puzzles resolus / choix / moralite de la partie precedente — il n'a pas de fonction de remise a zero (game_manager.gd) ; a faire avant le retour au menu")
-	_constater("Aucun dialogue ne survit au changement de scene", not DialogueManager.est_actif(),
-		"un dialogue de l'ancienne partie est encore affiche")
+	print("--- 7. Nouvelle partie (menu -> Commencer) ---")
+	var menu = get_tree().current_scene
+	if menu == null or menu.scene_file_path != SCENE_MENU:
+		_verifier("Le menu est affiche pour relancer une partie", "non", "oui")
+		return
+	# Une cible fantôme laissée par l'ancienne partie doit être oubliée.
+	var fantome := Node3D.new()
+	InteractionManager.enregistrer(1, fantome)
+	menu._sur_commencer()
+	var relancee := await _attendre_que(_main_est_la_scene, 5.0)
+	_verifier("Commencer relance main.tscn", str(relancee), "true")
+	_verifier("Une nouvelle partie repart avec un GameManager vierge",
+		str([GameManager.puzzle1_resolu, GameManager.puzzle2_resolu, GameManager.puzzle3_resolu,
+			GameManager.choix_grimoire, GameManager.moralite_kael, GameManager.moralite_mira]),
+		str([false, false, false, "", 0, 0]))
+	_verifier("Aucun dialogue ne survit au changement de scene", str(DialogueManager.est_actif()), "false")
+	_verifier("InteractionManager a oublie les cibles de l'ancienne partie",
+		str(InteractionManager._cibles[1].has(fantome)), "false")
+	fantome.free()
+
+func _main_est_la_scene() -> bool:
+	var sc := get_tree().current_scene
+	return sc != null and sc.scene_file_path == SCENE_MAIN
 
 # ══════════════════════════════════════════════════════════════════════════════
 # OUTILS — DÉPLACEMENTS
@@ -688,27 +787,46 @@ func _skill(action: String) -> void:
 	await get_tree().process_frame
 
 # Lit un dialogue jusqu'à sa fermeture, en respectant le délai minimum de 0.6 s.
-# Retourne le nombre d'appuis qu'il a fallu.
-func _lire_jusquau_bout(action: String) -> int:
+# Retourne le nombre d'appuis qu'il a fallu. Avec `stop_au_choix`, on s'arrête
+# dès qu'un choix (proposer_choix) s'affiche, sans appuyer dedans.
+func _lire_jusquau_bout(action: String, stop_au_choix: bool = false) -> int:
 	var appuis := 0
 	while DialogueManager.est_actif() and appuis < 40:
+		if stop_au_choix and _choix_en_cours():
+			break
 		await _attendre(0.7)
 		await _appuyer(action)
 		appuis += 1
 	return appuis
 
 func _fermer_dialogues(action: String = "joueur1_interagir") -> void:
-	await _lire_jusquau_bout(action)
+	await _lire_jusquau_bout(action, true)
+
+# Vrai si le DialogueManager affiche un choix (et pas un simple dialogue).
+func _choix_en_cours() -> bool:
+	return DialogueManager.est_actif() and DialogueManager._courant.get("choix", false)
+
+# Vrai si une ligne contenant `mot` s'est affichée depuis le début du test.
+func _vu(mot: String) -> bool:
+	return _lignes_vues.any(func(l): return l.contains(mot))
 
 func _attendre(secondes: float) -> void:
 	await get_tree().create_timer(secondes).timeout
 
-func _attendre_que(condition: Callable, delai_max: float) -> bool:
+# Avec `lire_dialogues`, on fait défiler les dialogues ouverts pendant l'attente
+# (pour atteindre un message qui attend son tour dans la file).
+func _attendre_que(condition: Callable, delai_max: float, lire_dialogues: bool = false) -> bool:
 	var fin := Time.get_ticks_msec() + int(delai_max * 1000.0)
+	var prochain_appui := Time.get_ticks_msec() + 700
 	while Time.get_ticks_msec() < fin:
 		if condition.call():
 			return true
-		await get_tree().process_frame
+		if lire_dialogues and DialogueManager.est_actif() and not _choix_en_cours() \
+				and Time.get_ticks_msec() > prochain_appui:
+			prochain_appui = Time.get_ticks_msec() + 700
+			await _appuyer("joueur1_interagir")
+		else:
+			await get_tree().process_frame
 	return condition.call()
 
 func _prompt(hud) -> String:

@@ -3,6 +3,7 @@
 #
 # Mécanique :
 #   Prérequis : Brennan doit avoir été interrogé (GameManager.brennan_parle = true)
+#   Sans lui, rien ne se passe — mais un message oriente les joueurs vers le meunier.
 #
 #   1. Mira entre dans la ZoneLanterne et allume sa Lanterne (Y)
 #      → l'écho de la liane devient visible (EchoLiane)
@@ -38,8 +39,8 @@ func _ready() -> void:
 	# L'écho est invisible au départ
 	echo_liane.visible = false
 
-	zone_lanterne.body_entered.connect(func(b): if b.is_in_group("mira"): mira_en_position = true)
-	zone_lanterne.body_exited.connect(func(b): if b.is_in_group("mira"): mira_en_position = false)
+	zone_lanterne.body_entered.connect(_sur_entree_zone_lanterne)
+	zone_lanterne.body_exited.connect(_sur_sortie_zone_lanterne)
 
 	zone_lianes.body_entered.connect(func(b): if b.is_in_group("kael"): kael_en_zone_lianes = true)
 	zone_lianes.body_exited.connect(func(b): if b.is_in_group("kael"): kael_en_zone_lianes = false)
@@ -55,15 +56,31 @@ func _connecter_personnages() -> void:
 	if kael:
 		kael.lianes_invoquees.connect(_sur_lianes_invoquees)
 
+# Mira entre dans la zone : si sa lanterne est DÉJÀ allumée, l'écho apparaît
+# tout de suite (elle n'a pas à l'éteindre puis la rallumer).
+func _sur_entree_zone_lanterne(body: Node3D) -> void:
+	if not body.is_in_group("mira"):
+		return
+	mira_en_position = true
+	if body.lanterne_allumee:
+		_sur_lanterne_changee(true)
+
+func _sur_sortie_zone_lanterne(body: Node3D) -> void:
+	if not body.is_in_group("mira"):
+		return
+	mira_en_position = false
+	echo_liane.visible = false
+
 # Kael a utilisé ses Brassards. On ne relit pas l'input ici : kael.gd émet déjà
 # `lianes_invoquees` quand il agit — le puzzle se contente de vérifier ses conditions.
 func _sur_lianes_invoquees(_pos: Vector3) -> void:
 	if resolu:
 		return
-	# Prérequis : avoir interrogé Brennan
-	if not GameManager.brennan_parle:
-		return
 	if not kael_en_zone_lianes:
+		return
+	# Prérequis : avoir interrogé Brennan. Sans lui, un indice plutôt que le silence.
+	if not GameManager.brennan_parle:
+		DialogueManager.afficher("", ["Kael sent quelque chose dans l'eau… Brennan, le meunier, saurait peut-être."])
 		return
 
 	if not mira_en_position:
@@ -77,7 +94,12 @@ func _sur_lianes_invoquees(_pos: Vector3) -> void:
 		DialogueManager.afficher("", ["La sève remue, puis se rendort. Il lui manque la lumière de la Lanterne de Mira."])
 
 func _sur_lanterne_changee(allumee: bool) -> void:
+	# Une fois la roue repartie, la lanterne n'a plus rien à révéler ici.
+	if resolu:
+		return
 	if not GameManager.brennan_parle:
+		if allumee and mira_en_position:
+			DialogueManager.afficher("", ["La Lanterne de Mira tremble au-dessus de l'eau… Brennan, le meunier, saurait peut-être."])
 		return
 	# L'écho apparaît seulement si Mira est dans la zone ET la lanterne est allumée
 	if allumee and mira_en_position:

@@ -38,6 +38,10 @@ func _ready() -> void:
 	menu_pause = MenuPause.new()
 	add_child(menu_pause)
 
+	# Nouvelle partie : aucun dialogue de la partie précédente ne doit rester
+	# affiché (le DialogueManager est un AutoLoad, il survit au changement de scène).
+	DialogueManager.masquer()
+
 	# zone1.gd annonce la fin de zone via GameManager (voir _appliquer_choix).
 	GameManager.zone1_finie.connect(_jouer_fin)
 
@@ -53,7 +57,7 @@ func _ready() -> void:
 # l'InteractionManager : c'est un AutoLoad, il survit à cette scène, et il
 # resterait coupé si on partait pendant une narration.
 func _exit_tree() -> void:
-	InteractionManager.process_mode = Node.PROCESS_MODE_INHERIT
+	InteractionManager.reprendre()
 
 # ──────────────────────────────────────────────────────────────────────────────
 # INTRO — Acte 0
@@ -78,6 +82,8 @@ func _jouer_intro() -> void:
 
 func _jouer_fin() -> void:
 	_figer_jeu(true)
+	# Musique de fin dès le fondu au noir (l'AudioManager coupe les ambiances).
+	AudioManager.jouer_fin()
 	ecran_narration = EcranNarration.new()
 	add_child(ecran_narration)
 	await ecran_narration.fondu_vers_noir(FONDU_FIN_ZONE)
@@ -108,6 +114,6 @@ func _figer_jeu(fige: bool) -> void:
 	for joueur in get_tree().get_nodes_in_group("joueurs"):
 		joueur.controles_actifs = not fige
 	if fige:
-		InteractionManager.process_mode = Node.PROCESS_MODE_DISABLED
+		InteractionManager.suspendre()
 	else:
-		InteractionManager.process_mode = Node.PROCESS_MODE_INHERIT
+		InteractionManager.reprendre()

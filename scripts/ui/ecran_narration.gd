@@ -16,9 +16,13 @@
 # PASSER UNE LIGNE
 # Le bouton « interagir » de n'importe quel joueur passe à la ligne suivante.
 # Cet écran lit donc le bouton lui-même : c'est sans danger UNIQUEMENT parce que
-# main.gd coupe l'InteractionManager pendant toute la narration (voir
-# main.gd → _figer_jeu). Sinon, un appui pour passer une ligne pourrait aussi
-# lancer une conversation avec un PNJ proche — le bug historique du projet.
+# main.gd suspend l'InteractionManager pendant toute la narration
+# (InteractionManager.suspendre(), voir main.gd → _figer_jeu). Sinon, un appui
+# pour passer une ligne pourrait aussi lancer une conversation avec un PNJ
+# proche — le bug historique du projet. C'est l'UNIQUE exception à la règle
+# d'or « seuls InteractionManager et DialogueManager lisent interagir » : elle
+# est acceptable car les deux autres lecteurs sont alors muets (Interaction-
+# Manager suspendu, et aucun dialogue n'est ouvert pendant la narration).
 #
 # PAUSE
 # Cet écran s'arrête quand le jeu est en pause (comportement par défaut d'un
@@ -41,6 +45,8 @@ const COULEUR_TEXTE = Color(0.95, 0.88, 0.70)   # même or doux que le titre du 
 var _fond: ColorRect
 var _texte: Label
 var _credits: VBoxContainer
+# Le bouton « interagir » était-il enfoncé à l'image précédente ? (voir _interagir_presse)
+var _etait_presse: bool = false
 
 func _ready() -> void:
 	# Au-dessus du split-screen (layer 1) et des dialogues (layer 10) ;
@@ -150,7 +156,10 @@ func defiler_credits(lignes: Array[String]) -> void:
 		if get_tree().paused:
 			continue
 		ecoule += get_process_delta_time()
-		if ecoule > DELAI_AVANT_PASSER and _interagir_presse():
+		# On appelle _interagir_presse() à CHAQUE image (même pendant le délai) :
+		# elle doit suivre l'état du bouton en continu pour repérer l'appui.
+		var presse := _interagir_presse()
+		if ecoule > DELAI_AVANT_PASSER and presse:
 			tween.kill()
 			break
 	_credits.visible = false
@@ -172,15 +181,26 @@ func _fondu(noeud: CanvasItem, alpha: float, duree: float) -> void:
 func _attendre_ou_passer(duree: float) -> void:
 	var ecoule := 0.0
 	while ecoule < duree:
-		# process_frame est émis au DÉBUT de chaque frame, avant les _process() :
-		# Input.is_action_just_pressed() est donc fiable juste après.
+		# On attend l'image suivante (process_frame est émis au début de chaque image).
 		await get_tree().process_frame
 		if get_tree().paused:
 			continue
 		ecoule += get_process_delta_time()
-		if ecoule > DELAI_AVANT_PASSER and _interagir_presse():
+		# On appelle _interagir_presse() à CHAQUE image (même pendant le délai) :
+		# elle doit suivre l'état du bouton en continu pour repérer l'appui.
+		var presse := _interagir_presse()
+		if ecoule > DELAI_AVANT_PASSER and presse:
 			return
 
+# Vrai à l'image où un joueur ENFONCE interagir (il n'était pas enfoncé avant).
+# Pourquoi pas Input.is_action_just_pressed() ? Cet écran attend le signal
+# process_frame comme d'autres scripts ; selon l'ordre dans lequel Godot les
+# réveille, un appui très bref (une seule image, cas des tests et des tapes
+# rapides) pouvait tomber « entre deux » et n'être jamais vu. Comparer l'état
+# d'une image à l'autre ne dépend pas de cet ordre.
 func _interagir_presse() -> bool:
-	return Input.is_action_just_pressed("joueur1_interagir") \
-		or Input.is_action_just_pressed("joueur2_interagir")
+	var presse: bool = Input.is_action_pressed("joueur1_interagir") \
+		or Input.is_action_pressed("joueur2_interagir")
+	var vient_d_appuyer: bool = presse and not _etait_presse
+	_etait_presse = presse
+	return vient_d_appuyer
