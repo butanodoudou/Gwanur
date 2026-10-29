@@ -71,7 +71,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 1, 5)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 5)
 
 [node name="Zone1" parent="Monde" unique_id=405955089 instance=ExtResource("4_zone1")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8302517, -3.8226004, 4.2650747)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 
 [node name="SplitScreen" type="CanvasLayer" parent="." unique_id=1852997581]
 
