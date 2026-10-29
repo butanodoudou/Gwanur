@@ -90,6 +90,7 @@ static func emprise(entree: Dictionary) -> Vector3:
 var _attente_choix: bool  = false
 var _stele_lue: bool      = false
 var _choix_affiche: bool  = false
+var _grimoire_annonce: bool = false  # l'indice du grimoire n'est donné qu'une fois
 
 func _ready() -> void:
 	set_process(false)
@@ -226,16 +227,29 @@ func _connecter_puzzles() -> void:
 	zone_grimoire.monitoring = false
 	zone_stele.body_entered.connect(_sur_entree_stele)
 
+# Le message de résolution de chaque puzzle est affiché par le script du
+# puzzle lui-même : DialogueManager.afficher() REMPLACE le dialogue en cours,
+# un second message ici l'écraserait dans la même frame.
 func _sur_puzzle1_resolu() -> void:
-	DialogueManager.afficher("", ["La porte grince... le passage est libre."])
+	_verifier_fin_de_zone()
 
 func _sur_puzzle2_resolu() -> void:
-	DialogueManager.afficher("", ["L'oiseau s'envole. Le chemin est ouvert."])
+	_verifier_fin_de_zone()
 
 func _sur_puzzle3_resolu() -> void:
-	if not GameManager.zone1_terminee():
+	_verifier_fin_de_zone()
+
+# Appelée après CHAQUE puzzle : les trois peuvent être résolus dans n'importe
+# quel ordre, c'est le dernier — quel qu'il soit — qui révèle le grimoire.
+func _verifier_fin_de_zone() -> void:
+	if not GameManager.zone1_terminee() or _grimoire_annonce:
 		return
+	_grimoire_annonce = true
+	# On laisse retomber l'émotion du dernier puzzle…
 	await get_tree().create_timer(3.0).timeout
+	# … et on attend que son message soit lu, pour ne pas l'écraser.
+	while DialogueManager.est_actif():
+		await DialogueManager.dialogue_fini
 	DialogueManager.afficher("", [
 		"Quelque chose brille dans la vieille maison au nord...",
 		"Une lame du plancher, légèrement soulevée."
@@ -296,18 +310,23 @@ func _appliquer_choix(choix: String) -> void:
 		GameManager.modifier_moralite_kael(-10)
 		GameManager.modifier_moralite_mira(-10)
 		DialogueManager.afficher("", [
-			"Vous refermez le grimoire. C'est entre vous.",
-			"Kael débloque : Résonance",
-			"Mira débloque : Ancrage"
+			"Vous refermez le grimoire. Il ne quittera plus votre sac.",
+			"Kael s'éveille à la Résonance.",
+			"Mira apprend l'Ancrage."
 		])
 	else:
 		GameManager.modifier_moralite_kael(10)
 		GameManager.modifier_moralite_mira(10)
 		DialogueManager.afficher("", [
-			"Vous partagez la nouvelle avec les villageois.",
-			"Kael débloque : Mémoire des Anciens",
-			"Mira débloque : Lecture"
+			"Vous emportez le grimoire jusqu'à la place. Sylvara se tait, puis se souvient.",
+			"Kael s'éveille à la Mémoire des Anciens.",
+			"Mira apprend la Lecture."
 		])
+
+	# Quand ce dernier dialogue est lu, la zone est finie : main.gd prend le
+	# relais (fondu au noir, texte de fin, crédits, retour au menu).
+	await DialogueManager.dialogue_fini
+	GameManager.annoncer_fin_zone1()
 
 # ──────────────────────────────────────────────────────────────────────────────
 # STÈLE DU PACTE D'AELRIC
