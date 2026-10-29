@@ -103,20 +103,22 @@ script = ExtResource("2_pnj")
 nom_pnj = "Vaenmor"
 couleur = Color(0.65, 0.62, 0.60, 1)
 lignes = [
+	"...",
 	"Vous avez les yeux de quelqu'un que j'ai connu.",
 	"Drôle de chose à voir avant de mourir.",
-	"Elle savait que vous viendriez. Elle m'a demandé de vous guetter.",
+	"Votre mère est venue s'asseoir ici, cette nuit. Sous le Rejet, comme autrefois.",
+	"Elle m'a demandé de vous guetter. Personne n'a jamais su lui dire non.",
 	"...",
-	"Elle m'a laissé quelque chose pour vous. Une lettre de votre père.",
+	"Elle m'a laissé ceci pour vous. Ce n'est pas d'elle. C'est de votre père.",
 	"— Lettre d'Aldric —",
-	"\"Si vous lisez ces mots, c'est que vous avez trouvé le chemin.",
-	"\"Je savais qui était votre mère depuis le début.",
-	"\"J'ai choisi de l'aimer quand même. Je referais ce choix mille fois.",
-	"\"Ce qu'elle porte — ce qu'elle est — ne diminue pas ce que nous avons été.",
-	"\"Allez jusqu'au bout. Pour elle. Pour vous.\"",
+	"« Mes enfants. Si ces mots vous trouvent, c'est que votre mère a dû partir.",
+	"« Je savais qui elle était, dès le premier jour. Ce qu'elle avait laissé derrière elle.",
+	"« Je l'ai aimée quand même. Non : je l'ai aimée pour ce qu'elle choisissait d'être.",
+	"« Ne lui en voulez pas de son silence. Certains secrets sont des manteaux.",
+	"« Restez ensemble. Vous êtes les deux moitiés d'une même promesse. »",
 	"...",
-	"Voilà. J'ai fait ce qu'elle m'a demandé.",
-	"Le reste vous appartient."
+	"Voilà. J'ai tenu parole.",
+	"Le reste ne m'appartient plus. Il est à vous."
 ]
 flag_apres = "vaenmor_parle"
 
@@ -132,9 +134,11 @@ script = ExtResource("2_pnj")
 nom_pnj = "Lira"
 couleur = Color(0.85, 0.60, 0.40, 1)
 lignes = [
-	"Ah, vous êtes les enfants d'Aelindra...",
-	"Cet oiseau blanc, sur le toit là-bas — il était toujours là quand elle rentrait.",
-	"Il vous attend, je crois."
+	"Kael, Mira... Vous cherchez Aelindra, n'est-ce pas ? Je ne l'ai pas vue passer.",
+	"Mais regardez l'oiseau blanc, sur le toit d'à côté. Il l'attendait chaque soir.",
+	"Elle soufflait dans une corne, et il descendait. Son poids suffisait à lever la grille.",
+	"Kael, toi aussi tu as une corne. Approche-toi et sonne. Il te reconnaîtra peut-être.",
+	"Mais la grille ne reste pas levée longtemps. Mira, il faudra courir bloquer le verrou."
 ]
 flag_apres = "lira_parlee"
 
@@ -150,9 +154,11 @@ script = ExtResource("2_pnj")
 nom_pnj = "Brennan"
 couleur = Color(0.45, 0.32, 0.18, 1)
 lignes = [
-	"La roue s'est arrêtée le jour où Aelindra est partie.",
-	"Comme si elle retenait quelque chose.",
-	"Il y avait une liane qui courait le long du mur, avant. Elle a disparu avec elle."
+	"La roue s'est arrêtée cette nuit. La nuit où Aelindra est partie.",
+	"Une liane courait sur l'engrenage, depuis toujours. Ce matin, plus rien. Pas une feuille.",
+	"Mira, ta mère disait que cette lanterne voit ce qui n'est plus là. Allume-la au moulin.",
+	"Et toi, Kael, tes brassards font pousser ce qui manque. Rends-lui sa liane.",
+	"Si la roue repart, le pont du ruisseau s'avancera. Moi, je ne suis qu'un meunier."
 ]
 flag_apres = "brennan_parle"
 
@@ -170,8 +176,8 @@ script = ExtResource("2_pnj")
 nom_pnj = "Marnen"
 couleur = Color(0.70, 0.55, 0.45, 1)
 lignes = [
-	"Le moulin de Brennan va tourner de nouveau ?",
-	"Ça fait des mois qu'on attend ça."
+	"Le moulin de Brennan s'est tu cette nuit. C'est le silence qui m'a réveillée.",
+	"Trente ans que je m'endors au bruit de cette roue. Elle va repartir, dites ?"
 ]
 
 [node name="ZoneProximite" type="Area3D" parent="PNJ/Marnen"]
@@ -186,9 +192,9 @@ script = ExtResource("2_pnj")
 nom_pnj = "Soraï"
 couleur = Color(0.85, 0.70, 0.40, 1)
 lignes = [
-	"L'arbre a changé de couleur la semaine dernière.",
-	"Tante Maret dit que c'est normal.",
-	"Moi, je crois pas."
+	"L'Aelith a changé de couleur, la semaine dernière. Là-haut, autour du trou de ciel.",
+	"Tante Maret dit que c'est normal, pour un arbre aussi vieux.",
+	"Moi, je crois qu'il a peur."
 ]
 
 [node name="ZoneProximite" type="Area3D" parent="PNJ/Sorai"]
@@ -203,9 +209,9 @@ script = ExtResource("2_pnj")
 nom_pnj = "Eldwen"
 couleur = Color(0.50, 0.40, 0.28, 1)
 lignes = [
-	"Vous venez de loin ?",
-	"Le chemin vers le nord est fermé depuis l'hiver.",
-	"Personne n'a su rouvrir cette porte. Bonne chance."
+	"Depuis l'hiver, plus personne ne passe la porte du nord.",
+	"On dit que la lisière se referme, là-bas. Que la brume mange les chemins.",
+	"Moi, je garde mes bêtes du bon côté de l'écorce."
 ]
 
 [node name="ZoneProximite" type="Area3D" parent="PNJ/Eldwen"]
@@ -220,8 +226,8 @@ script = ExtResource("2_pnj")
 nom_pnj = "Tovan"
 couleur = Color(0.45, 0.38, 0.25, 1)
 lignes = [
-	"Bonne récolte cette année. C'est tout ce qu'on peut espérer.",
-	"Les gens d'ici ont appris à ne pas poser trop de questions."
+	"Bonne récolte, cette année. Le tronc garde la chaleur, même quand l'automne mord.",
+	"Ici, on ne pose pas trop de questions. C'est comme ça qu'on devient vieux."
 ]
 
 [node name="ZoneProximite" type="Area3D" parent="PNJ/Tovan"]
@@ -236,8 +242,9 @@ script = ExtResource("2_pnj")
 nom_pnj = "Nyssil"
 couleur = Color(0.65, 0.48, 0.60, 1)
 lignes = [
-	"Mon fils est parti chercher de l'ouvrage à Arathos l'an dernier.",
-	"Je l'attends encore."
+	"Mon fils est parti chercher de l'ouvrage à Arathos, l'an dernier. Je l'attends encore.",
+	"Je tisse pour ne pas compter les jours.",
+	"Votre mère m'a appris ce point. « Un fil tient mieux quand il en croise un autre. »"
 ]
 
 [node name="ZoneProximite" type="Area3D" parent="PNJ/Nyssil"]
@@ -252,9 +259,9 @@ script = ExtResource("2_pnj")
 nom_pnj = "Caeryn"
 couleur = Color(0.55, 0.50, 0.48, 1)
 lignes = [
-	"C'est moi qui ai forgé les gonds de cette porte au nord.",
-	"Solide comme le granit.",
-	"Faudra deux paires de bras pour l'ouvrir. Ou deux cœurs bien accordés."
+	"C'est moi qui ai forgé les gonds de la grande porte, au nord. Solides comme le granit.",
+	"Deux poignées, une de chaque côté. Faut tirer en même temps, sinon rien ne bouge.",
+	"Deux paires de bras... ou deux cœurs bien accordés. Personne ne l'ouvre seul."
 ]
 
 [node name="ZoneProximite" type="Area3D" parent="PNJ/Caeryn"]

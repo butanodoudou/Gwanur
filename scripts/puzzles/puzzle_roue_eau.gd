@@ -67,14 +67,14 @@ func _sur_lianes_invoquees(_pos: Vector3) -> void:
 		return
 
 	if not mira_en_position:
-		DialogueManager.afficher("", ["Kael sent l'endroit... Mira, viens voir avec ta Lanterne !"])
+		DialogueManager.afficher("", ["Kael sent une vieille sève sous l'écorce... Mira, allume ta Lanterne près du moulin !"])
 		return
 
 	var mira = get_tree().get_first_node_in_group("mira")
 	if mira and mira.lanterne_allumee:
 		_faire_pousser_lianes()
 	else:
-		DialogueManager.afficher("", ["Kael sent l'endroit... mais quelque chose manque."])
+		DialogueManager.afficher("", ["La sève remue, puis se rendort. Il lui manque la lumière de la Lanterne de Mira."])
 
 func _sur_lanterne_changee(allumee: bool) -> void:
 	if not GameManager.brennan_parle:
@@ -83,8 +83,8 @@ func _sur_lanterne_changee(allumee: bool) -> void:
 	if allumee and mira_en_position:
 		echo_liane.visible = true
 		DialogueManager.afficher("", [
-			"Mira voit l'écho : une vieille liane enroulée autour de l'engrenage...",
-			"Kael ! Il faut faire pousser une liane là — sur l'engrenage !"
+			"Dans la lueur de la Lanterne, une liane fantôme réapparaît, enroulée sur l'engrenage.",
+			"Mira : « Kael, elle était là ! Fais-la repousser avec tes Brassards ! »"
 		])
 	else:
 		echo_liane.visible = false
@@ -95,8 +95,8 @@ func _faire_pousser_lianes() -> void:
 	echo_liane.visible = false
 
 	DialogueManager.afficher("", [
-		"La liane s'enroule autour de l'engrenage...",
-		"La roue tourne ! Le pont s'avance !"
+		"La liane s'enroule sur l'engrenage, comme si elle se souvenait du chemin.",
+		"La roue se remet à tourner. Sur le ruisseau, le pont s'avance."
 	])
 
 	# Liane pousse (monte en place)

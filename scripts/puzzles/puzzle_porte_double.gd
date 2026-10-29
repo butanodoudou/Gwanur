@@ -95,7 +95,7 @@ func _ouvrir_porte() -> void:
 	zone_kael.definir_disponible(false)
 	zone_mira.definir_disponible(false)
 
-	DialogueManager.afficher("", ["La porte grince et s'ouvre lentement..."])
+	DialogueManager.afficher("", ["Deux mains, deux poignées, un seul souffle. La porte grince et se lève lentement..."])
 	# La porte monte de 3.5m en 1.5 secondes
 	var tween = create_tween()
 	tween.tween_property(porte, "position", porte.position + Vector3(0, 3.5, 0), 1.5)

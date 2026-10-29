@@ -74,7 +74,7 @@ func _process(delta: float) -> void:
 # Les deux joueurs voient le temps qu'il reste à Mira pour atteindre le verrou.
 func _annoncer_compte_a_rebours() -> void:
 	var secondes: int = max(int(ceil(_minuterie_fermeture)), 0)
-	GameManager.definir_etat_coop("Le passage se referme dans %d s — Mira, au verrou !" % secondes)
+	GameManager.definir_etat_coop("La grille retombe dans %d s — Mira, cours au verrou !" % secondes)
 
 func _sur_corne_sonnee() -> void:
 	if oiseau_attire or resolu:
@@ -83,13 +83,13 @@ func _sur_corne_sonnee() -> void:
 	var kael = get_tree().get_first_node_in_group("kael")
 	if kael and kael.global_position.distance_to(oiseau.global_position) <= 8.0:
 		oiseau_attire = true
-		DialogueManager.afficher("", ["L'oiseau tourne la tête... il vole vers vous."])
+		DialogueManager.afficher("", ["L'oiseau blanc dresse la tête vers la corne... puis se laisse glisser du toit."])
 
 func _ouvrir_grille() -> void:
 	grille_ouverte = true
 	_minuterie_fermeture = DUREE_OUVERTURE
 	zone_verrou.definir_disponible(true)
-	DialogueManager.afficher("", ["Le poids ouvre le passage ! Mira, dépêche-toi !"])
+	DialogueManager.afficher("", ["Sous le poids de l'oiseau, la grille se lève. Mira, cours bloquer le verrou !"])
 	var tween = create_tween()
 	tween.tween_property(grille, "position", grille.position + Vector3(0, 3.5, 0), 1.0)
 
@@ -101,7 +101,7 @@ func _fermer_grille() -> void:
 	GameManager.definir_etat_coop("")
 	# L'oiseau retourne sur son perchoir
 	oiseau.global_position = position_perchoir
-	DialogueManager.afficher("", ["L'oiseau s'est envolé. Recommencez."])
+	DialogueManager.afficher("", ["L'oiseau prend peur et regagne son toit. La grille retombe. Kael, rappelle-le !"])
 	var tween = create_tween()
 	tween.tween_property(grille, "position", grille.position - Vector3(0, 3.5, 0), 1.0)
 
@@ -113,5 +113,5 @@ func _activer_verrou() -> void:
 	GameManager.puzzle2_resolu = true
 	zone_verrou.definir_disponible(false)
 	GameManager.definir_etat_coop("")
-	DialogueManager.afficher("", ["Mira verrouille le passage. Kael peut passer."])
+	DialogueManager.afficher("", ["Mira bloque le verrou d'un coup sec. La grille ne retombera plus."])
 	puzzle_resolu.emit()

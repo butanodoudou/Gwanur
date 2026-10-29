@@ -227,18 +227,18 @@ func _connecter_puzzles() -> void:
 	zone_stele.body_entered.connect(_sur_entree_stele)
 
 func _sur_puzzle1_resolu() -> void:
-	DialogueManager.afficher("", ["La porte grince... le passage est libre."])
+	DialogueManager.afficher("", ["Les gonds de Caeryn gémissent. Pour la première fois depuis l'hiver, la porte s'ouvre."])
 
 func _sur_puzzle2_resolu() -> void:
-	DialogueManager.afficher("", ["L'oiseau s'envole. Le chemin est ouvert."])
+	DialogueManager.afficher("", ["La grille tient bon. L'oiseau blanc vous regarde, comme s'il attendait la suite."])
 
 func _sur_puzzle3_resolu() -> void:
 	if not GameManager.zone1_terminee():
 		return
 	await get_tree().create_timer(3.0).timeout
 	DialogueManager.afficher("", [
-		"Quelque chose brille dans la vieille maison au nord...",
-		"Une lame du plancher, légèrement soulevée."
+		"Au-delà de la porte du nord, dans la vieille maison de pierre, quelque chose brille.",
+		"Une latte du plancher, à peine soulevée. Comme si on l'avait laissée ainsi exprès."
 	])
 	zone_grimoire.monitoring = true
 
@@ -254,14 +254,14 @@ func _sur_entree_grimoire(body: Node3D) -> void:
 
 func _declencher_grimoire() -> void:
 	DialogueManager.afficher("Grimoire d'Aelindra", [
-		"Un vieux grimoire caché sous les lattes. L'écriture est celle de votre mère.",
-		"\"Pour mes enfants, si jamais ils trouvent ces mots —\"",
-		"\"Je n'ai jamais eu le courage de vous dire qui j'étais vraiment.\"",
-		"\"La Tisserande. Gardienne de l'équilibre entre les peuples.",
-		"\"C'est le titre que je portais avant de choisir une vie ordinaire avec vous.\"",
-		"\"Aldric savait. Depuis le début. Il a choisi de m'aimer quand même.\"",
-		"\"Si vous lisez ceci sans moi, c'est que l'équilibre s'est rompu.\"",
-		"\"À vous de choisir maintenant ce que vous ferez de ce secret.\""
+		"Sous la latte, un grimoire enveloppé de lin. L'écriture penchée de votre mère.",
+		"« Pour Kael et Mira, si un jour ces pages vous trouvent. »",
+		"« Avant d'être votre mère, j'étais la Tisserande : celle qui tient les fils des peuples.",
+		"« Ce fil-là, je l'ai lâché pour vous. J'ai cru que le monde tiendrait sans moi.",
+		"« Il ne tient pas. La lisière s'efface — et vous êtes nés sur la lisière.",
+		"« Votre père savait tout. Il disait que vous seriez plus forts que nous, parce que deux.",
+		"« Je pars recoudre ce que j'ai défait. Ne me cherchez pas trop vite.",
+		"« Ce que vous ferez de ce secret, décidez-le ensemble. C'est le seul conseil que j'aie. »"
 	])
 	# Attend la fin de la lecture (le joueur clique à travers toutes les lignes)
 	await DialogueManager.dialogue_fini
@@ -283,8 +283,8 @@ func _process(_delta: float) -> void:
 	# Re-afficher le choix dès que le panneau est fermé (loop jusqu'au choix)
 	if not DialogueManager._panneau.visible:
 		DialogueManager.afficher("", [
-			"Joueur 1 (A) → Garder le secret entre vous",
-			"Joueur 2 (A) → Le partager avec les villageois"
+			"Garder le grimoire entre vous : Kael (A)   ·   Le confier au village : Mira (A)",
+			"Parlez-en d'abord. Garder le secret : Kael (A)   ·   Le partager : Mira (A)"
 		])
 
 func _appliquer_choix(choix: String) -> void:
@@ -320,11 +320,11 @@ func _sur_entree_stele(body: Node3D) -> void:
 		return
 	_stele_lue = true
 	DialogueManager.afficher("Stèle du Pacte d'Aelric", [
-		"En l'an de la grande trêve, par la parole d'Aelindra de Vaelindra",
-		"et d'Aldric d'Arathos, ce Pacte fut scellé.",
-		"Que leurs noms unissent ce que la guerre avait séparé.",
-		"Que ceux qui passent ce seuil sachent qu'ils marchent",
-		"sur les pas d'une promesse."
+		"Le même texte, gravé trois fois : en elfique, en langue d'Arathos, et en signes inconnus.",
+		"« Ici commence la terre neutre, gardée par les Lisières et le Pacte d'Aelric. »",
+		"« Scellé en l'an de la trêve par la Tisserande et Aldric, émissaire d'Arathos. »",
+		"« Que nul ne porte les armes au-delà de cette pierre. »",
+		"« Que ceux qui passent ce seuil marchent sur les pas d'une promesse. »"
 	])
 
 # ──────────────────────────────────────────────────────────────────────────────
