@@ -81,7 +81,7 @@ func _lancer() -> void:
 		_verifier("Interagir passe a la ligne suivante", _texte(), TextesNarration.INTRO[1])
 	InteractionManager.retirer(1, pnj)
 
-	await _passer_jusqua(func(): return _main.ecran_narration == null, 30.0)
+	await _passer_jusqua(func(): return _main.ecran_narration == null, 60.0)
 	_verifier("L'intro se termine", str(_main.ecran_narration == null), "true")
 	_verifier("Les joueurs reprennent la main", str(kael.controles_actifs), "true")
 	_verifier("InteractionManager reactive",

@@ -92,6 +92,13 @@ static func emprise(entree: Dictionary) -> Vector3:
 var _attente_choix: bool  = false
 var _stele_lue: bool      = false
 var _grimoire_annonce: bool = false  # l'indice du grimoire n'est donné qu'une fois
+var _grimoire_ouvert: bool = false   # le grimoire ne se lit qu'une fois
+
+# L'indice donné quand les trois puzzles sont résolus (lu aussi par test_parcours_complet).
+const INDICE_GRIMOIRE: Array[String] = [
+	"Au-delà de la porte du nord, dans la vieille maison de pierre, quelque chose brille.",
+	"Une latte du plancher, à peine soulevée. Comme si on l'avait laissée ainsi exprès."
+]
 
 func _ready() -> void:
 	_construire_village()
@@ -250,16 +257,20 @@ func _verifier_fin_de_zone() -> void:
 	await get_tree().create_timer(3.0, false).timeout
 	# … puis l'indice. S'il reste un message du puzzle à l'écran, celui-ci
 	# attend son tour dans la file du DialogueManager.
-	DialogueManager.afficher("", [
-		"Au-delà de la porte du nord, dans la vieille maison de pierre, quelque chose brille.",
-		"Une latte du plancher, à peine soulevée. Comme si on l'avait laissée ainsi exprès."
-	])
+	DialogueManager.afficher("", INDICE_GRIMOIRE)
 	zone_grimoire.monitoring = true
 
 func _sur_entree_grimoire(body: Node3D) -> void:
 	if not body.is_in_group("joueurs"):
 		return
-	zone_grimoire.monitoring = false
+	# Garde-fou : Godot refuse qu'on change `monitoring` PENDANT le signal
+	# body_entered (l'ancien code échouait, et le grimoire se relançait à
+	# chaque entrée). On le coupe donc « en différé », à la fin de l'image,
+	# et le booléen empêche toute seconde lecture d'ici là.
+	if _grimoire_ouvert:
+		return
+	_grimoire_ouvert = true
+	zone_grimoire.set_deferred("monitoring", false)
 	_declencher_grimoire()
 
 # ──────────────────────────────────────────────────────────────────────────────

@@ -70,17 +70,17 @@ static func mettre_a_jour(id_joueur: int) -> void:
 # Renvoie CLAVIER ou MANETTE si cet événement de l'InputMap est enfoncé en ce moment.
 static func _detecter(evenement: InputEvent) -> String:
 	if evenement is InputEventKey:
-		var touche: InputEventKey = evenement
+		var touche := evenement as InputEventKey
 		if touche.keycode != KEY_NONE and Input.is_key_pressed(touche.keycode):
 			return CLAVIER
 		if touche.physical_keycode != KEY_NONE and Input.is_physical_key_pressed(touche.physical_keycode):
 			return CLAVIER
 	elif evenement is InputEventJoypadButton:
-		var bouton: InputEventJoypadButton = evenement
+		var bouton := evenement as InputEventJoypadButton
 		if Input.is_joy_button_pressed(bouton.device, bouton.button_index):
 			return MANETTE
 	elif evenement is InputEventJoypadMotion:
-		var stick: InputEventJoypadMotion = evenement
+		var stick := evenement as InputEventJoypadMotion
 		if absf(Input.get_joy_axis(stick.device, stick.axis)) > SEUIL_STICK:
 			return MANETTE
 	return ""

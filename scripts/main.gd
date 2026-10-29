@@ -38,6 +38,10 @@ func _ready() -> void:
 	menu_pause = MenuPause.new()
 	add_child(menu_pause)
 
+	# Nouvelle partie : aucun dialogue de la partie précédente ne doit rester
+	# affiché (le DialogueManager est un AutoLoad, il survit au changement de scène).
+	DialogueManager.masquer()
+
 	# zone1.gd annonce la fin de zone via GameManager (voir _appliquer_choix).
 	GameManager.zone1_finie.connect(_jouer_fin)
 
