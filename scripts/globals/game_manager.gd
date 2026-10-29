@@ -15,6 +15,11 @@ signal moralite_changee(id_joueur: int, valeur: int)
 # dialogue qui défile et disparaît. Il sert à dire "l'autre t'attend".
 signal etat_coop_change(texte: String)
 
+# Émis quand la Zone 1 est finie : le grimoire est choisi ET le dialogue qui
+# suit est terminé. main.gd l'écoute pour lancer l'écran de fin et les crédits.
+# (zone1.gd ne connaît pas l'écran de fin : il annonce, main.gd orchestre.)
+signal zone1_finie
+
 # ── Progression Zone 1 ─────────────────────────────────────────────────────
 var vaenmor_parle: bool = false     # Joueurs ont parlé à Vaenmor (donne la lettre d'Aldric)
 var lira_parlee: bool = false       # Joueurs ont parlé à Lira
@@ -54,3 +59,24 @@ func definir_etat_coop(texte: String) -> void:
 
 func zone1_terminee() -> bool:
 	return puzzle1_resolu and puzzle2_resolu and puzzle3_resolu
+
+func annoncer_fin_zone1() -> void:
+	zone1_finie.emit()
+
+# ── Nouvelle partie ────────────────────────────────────────────────────────
+# GameManager est un AutoLoad : il survit aux changements de scène. Sans cette
+# remise à zéro, revenir au menu puis relancer une partie démarrerait avec
+# les puzzles déjà résolus et le grimoire déjà choisi.
+# Appelée par le menu principal quand on clique sur « Commencer ».
+func reinitialiser() -> void:
+	vaenmor_parle = false
+	lira_parlee = false
+	brennan_parle = false
+	puzzle1_resolu = false
+	puzzle2_resolu = false
+	puzzle3_resolu = false
+	choix_grimoire = ""
+	moralite_kael = 0
+	moralite_mira = 0
+	# Passe par la fonction pour que les HUD effacent leur message.
+	definir_etat_coop("")
