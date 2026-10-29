@@ -115,13 +115,20 @@ def paroi():
 		# sillons. Sans eux la paroi est une surface unie, et 60 m de surface
 		# unie se lisent comme du béton, pas comme du bois.
 		sombre = (i % 3 == 1)
+		# Et une sur cinq est plus claire, dorée : la crête qui prend le soleil.
+		# Trois valeurs au lieu de deux, c'est ce qui donne du relief à 60 m.
+		teinte = "ecorce_aelith"
+		if sombre:
+			teinte = "ecorce_aelith_sombre"
+		elif i % 5 == 0:
+			teinte = "ecorce_aelith_doree"
 		branche(
 			f"Fibre_{i}",
 			(bx, by, -2.0),
 			(hx, hy, hauteur),
 			epaisseur * (0.58 if sombre else 0.72),
 			epaisseur * (0.40 if sombre else 0.52),
-			"ecorce_aelith_sombre" if sombre else "ecorce_aelith",
+			teinte,
 			segments=6,
 		)
 

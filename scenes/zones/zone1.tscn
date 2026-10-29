@@ -129,7 +129,7 @@ shape = SubResource("ss_pnj")
 
 ; Lira — voisine, parle de l'oiseau blanc (déclenche Puzzle 2)
 [node name="Lira" type="Node3D" parent="PNJ"]
-position = Vector3(18.0, 0.0, 14.0)
+position = Vector3(16.5, 0.0, 14.0)
 script = ExtResource("2_pnj")
 nom_pnj = "Lira"
 couleur = Color(0.85, 0.60, 0.40, 1)
@@ -149,7 +149,7 @@ shape = SubResource("ss_pnj")
 
 ; Brennan — meunier, parle du mécanisme cassé (déclenche Puzzle 3)
 [node name="Brennan" type="Node3D" parent="PNJ"]
-position = Vector3(-20.0, 0.0, -12.0)
+position = Vector3(-20.6, 0.0, -6.5)
 script = ExtResource("2_pnj")
 nom_pnj = "Brennan"
 couleur = Color(0.45, 0.32, 0.18, 1)
@@ -383,7 +383,7 @@ mesh = SubResource("cm_roue")
 
 [node name="Pont" type="AnimatableBody3D" parent="Puzzle3RoueEau"]
 sync_to_physics = false
-position = Vector3(-28.0, -0.05, -34.0)
+position = Vector3(-28.0, -0.05, -26.0)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Puzzle3RoueEau/Pont"]
 shape = SubResource("bs_pont")

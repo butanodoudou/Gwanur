@@ -8,6 +8,12 @@
 [ext_resource type="Script" uid="uid://csihh5dniiyeg" path="res://scripts/ui/hud_joueur.gd" id="6_hud"]
 
 [sub_resource type="ProceduralSkyMaterial" id="Sky_001"]
+sky_top_color = Color(0.36, 0.55, 0.78, 1)
+sky_horizon_color = Color(0.96, 0.78, 0.56, 1)
+sky_curve = 0.12
+ground_bottom_color = Color(0.32, 0.25, 0.18, 1)
+ground_horizon_color = Color(0.92, 0.74, 0.52, 1)
+sun_angle_max = 40.0
 
 [sub_resource type="Sky" id="SkyRes_001"]
 sky_material = SubResource("Sky_001")
@@ -16,11 +22,30 @@ sky_material = SubResource("Sky_001")
 background_mode = 2
 sky = SubResource("SkyRes_001")
 ambient_light_source = 3
-ambient_light_energy = 1.05
+ambient_light_color = Color(0.66, 0.57, 0.48, 1)
+ambient_light_sky_contribution = 0.6
+ambient_light_energy = 0.8
+tonemap_mode = 3
+tonemap_exposure = 1.1
+tonemap_white = 6.0
+ssao_enabled = true
+ssao_radius = 1.2
+ssao_intensity = 1.6
+ssao_light_affect = 0.1
+glow_enabled = true
+glow_intensity = 0.55
+glow_strength = 0.9
+glow_bloom = 0.04
+glow_hdr_threshold = 1.1
 fog_enabled = true
-fog_light_color = Color(0.807843, 0.85098, 0.878431, 1)
-fog_density = 0.0008
-fog_sky_affect = 0.2
+fog_light_color = Color(0.95, 0.78, 0.58, 1)
+fog_sun_scatter = 0.3
+fog_density = 0.0006
+fog_aerial_perspective = 0.35
+fog_sky_affect = 0.15
+adjustment_enabled = true
+adjustment_contrast = 1.06
+adjustment_saturation = 1.15
 
 [node name="Main" type="Node3D" unique_id=1086606185]
 script = ExtResource("1_main")
@@ -31,10 +56,11 @@ script = ExtResource("1_main")
 environment = SubResource("Env_001")
 
 [node name="LumiereDirectionnelle" type="DirectionalLight3D" parent="Monde" unique_id=1103342359]
-transform = Transform3D(1, 0, 0, 0, 0.374607, -0.927184, 0, 0.927184, 0.374607, 0, 10, 0)
-light_color = Color(1, 0.952941, 0.8, 1)
-light_energy = 1.2
+transform = Transform3D(0.882948, 0, 0.469472, 0.421958, 0.438371, -0.793588, -0.205803, 0.898794, 0.387059, 0, 10, 0)
+light_color = Color(1, 0.84, 0.6, 1)
+light_energy = 1.9
 shadow_enabled = true
+shadow_blur = 1.5
 shadow_normal_bias = 3.0
 directional_shadow_max_distance = 180.0
 
@@ -45,7 +71,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 1, 5)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 5)
 
 [node name="Zone1" parent="Monde" unique_id=405955089 instance=ExtResource("4_zone1")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8302517, -3.8226004, 4.2650747)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 
 [node name="SplitScreen" type="CanvasLayer" parent="." unique_id=1852997581]
 

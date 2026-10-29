@@ -439,6 +439,11 @@ func _poser_les_rochers() -> void:
 func _habiller_le_puits() -> void:
 	var p := Vector3(7.0, 0.0, 6.0)
 
+	# Le puits modélisé (tools/gen_props.py) est posé par zone1.gd sur sa
+	# boîte de collision : s'il existe, l'habillage en primitives est inutile.
+	if ResourceLoader.exists("res://assets/models/props/puits.glb"):
+		return
+
 	var margelle := TorusMesh.new()
 	margelle.inner_radius = 0.85
 	margelle.outer_radius = 1.15
