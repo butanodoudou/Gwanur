@@ -1,5 +1,5 @@
 # scripts/characters/mira.gd
-# Mira — héritière de la robustesse humaine, joueur 2 (manette 2)
+# Mira — héritière de la robustesse humaine, joueur 2 (deuxième manette, device 1 — flèches en fallback)
 #
 #   Skill 1 (X) → Grappin de Cuivre   : accroche et interagit à distance
 #   Skill 2 (Y) → Lanterne à Mémoire  : révèle les échos du passé
@@ -27,6 +27,9 @@ func _physics_process(delta: float) -> void:
 	_verifier_skills()
 
 func _verifier_skills() -> void:
+	# Pendant l'intro et la fin, les joueurs ne contrôlent rien.
+	if not controles_actifs:
+		return
 	if Input.is_action_just_pressed("joueur2_skill1"):
 		utiliser_grappin()
 	if Input.is_action_just_pressed("joueur2_skill2"):

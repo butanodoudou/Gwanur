@@ -1,5 +1,5 @@
 # scripts/characters/kael.gd
-# Kael — héritier de la magie elfique, joueur 1 (manette 1 / clavier fallback)
+# Kael — héritier de la magie elfique, joueur 1 (première manette, device 0 — clavier ZQSD en fallback)
 #
 #   Skill 1 (X) → Brassards de Sève  : fait pousser des lianes
 #   Skill 2 (Y) → Corne d'Appel      : attire les créatures proches
@@ -27,6 +27,9 @@ func _physics_process(delta: float) -> void:
 	_verifier_skills()
 
 func _verifier_skills() -> void:
+	# Pendant l'intro et la fin, les joueurs ne contrôlent rien.
+	if not controles_actifs:
+		return
 	if Input.is_action_just_pressed("joueur1_skill1"):
 		utiliser_brassards()
 	if Input.is_action_just_pressed("joueur1_skill2"):

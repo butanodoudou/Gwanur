@@ -1,8 +1,10 @@
 # scripts/camera/camera_follow.gd
 # Caméra orbitale qui suit un personnage.
 # Trouve sa cible automatiquement via les groupes "kael" / "mira" au démarrage.
-# Joueur 1 : clic droit + souris pour pivoter.
-# Joueur 2 : stick droit de la manette (device 0).
+# Chaque joueur pivote avec le stick droit de SA manette, via les actions
+# joueurN_camera_haut/bas/gauche/droite de project.godot :
+#   Joueur 1 (Kael) : manette 0 — et en plus clic droit + souris (fallback dev)
+#   Joueur 2 (Mira) : manette 1 — et en plus le pavé numérique 8/2/4/6
 #
 # La caméra tourne sur DEUX axes :
 #   - horizontal (`_angle_h`) : elle fait le tour du personnage ;
@@ -103,19 +105,30 @@ func _axe(valeur: float) -> float:
 	var utile := (absf(valeur) - ZONE_MORTE) / (1.0 - ZONE_MORTE)
 	return signf(valeur) * utile * utile
 
+# Position du stick droit de ce joueur, de -1 à +1 sur chaque axe.
+# get_action_raw_strength() renvoie la valeur BRUTE du stick (sans la zone
+# morte de l'action) : c'est _axe() qui applique la nôtre, avec sa courbe.
+# Une touche du clavier renvoie simplement 1.0 quand elle est enfoncée.
+func _lire_stick() -> Vector2:
+	var prefixe := "joueur%d_camera_" % id_joueur
+	return Vector2(
+		Input.get_action_raw_strength(prefixe + "droite") - Input.get_action_raw_strength(prefixe + "gauche"),
+		Input.get_action_raw_strength(prefixe + "bas") - Input.get_action_raw_strength(prefixe + "haut"))
+
 func _process(delta: float) -> void:
 	if not cible:
 		return
 
-	# Kael (J1) : souris uniquement (voir _unhandled_input)
-	# Mira (J2) : stick droit device 0 — joueur2_* est mappé sur device 0 dans project.godot
-	if id_joueur == 2:
-		_angle_h -= _axe(Input.get_joy_axis(0, JOY_AXIS_RIGHT_X)) * sensibilite_stick * delta
-		# Stick vers le haut → valeur négative → la caméra descend → on regarde
-		# vers le ciel. Même convention que la souris.
-		_angle_v = clamp(
-			_angle_v + _axe(Input.get_joy_axis(0, JOY_AXIS_RIGHT_Y)) * sensibilite_stick * delta,
-			ANGLE_V_MIN, ANGLE_V_MAX)
+	# Stick droit (ou pavé numérique pour J2). La souris de J1 passe par
+	# _unhandled_input. On ne lit PAS la manette directement par son numéro :
+	# c'est project.godot qui dit quelle manette appartient à quel joueur.
+	var stick := _lire_stick()
+	_angle_h -= _axe(stick.x) * sensibilite_stick * delta
+	# Stick vers le haut → valeur négative → la caméra descend → on regarde
+	# vers le ciel. Même convention que la souris.
+	_angle_v = clamp(
+		_angle_v + _axe(stick.y) * sensibilite_stick * delta,
+		ANGLE_V_MIN, ANGLE_V_MAX)
 
 	# ── Le pivot rattrape le personnage ──────────────────────────────────────
 	var vise_pivot := cible.global_position + Vector3.UP * HAUTEUR_REGARD

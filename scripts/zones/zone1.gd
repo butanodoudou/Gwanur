@@ -90,6 +90,7 @@ static func emprise(entree: Dictionary) -> Vector3:
 var _attente_choix: bool  = false
 var _stele_lue: bool      = false
 var _choix_affiche: bool  = false
+var _grimoire_annonce: bool = false  # l'indice du grimoire n'est donné qu'une fois
 
 func _ready() -> void:
 	set_process(false)
@@ -441,19 +442,32 @@ func _connecter_puzzles() -> void:
 	zone_grimoire.monitoring = false
 	zone_stele.body_entered.connect(_sur_entree_stele)
 
+# Le message de résolution de chaque puzzle est affiché par le script du
+# puzzle lui-même : DialogueManager.afficher() REMPLACE le dialogue en cours,
+# un second message ici l'écraserait dans la même frame.
 func _sur_puzzle1_resolu() -> void:
-	DialogueManager.afficher("", ["La porte grince... le passage est libre."])
+	_verifier_fin_de_zone()
 
 func _sur_puzzle2_resolu() -> void:
-	DialogueManager.afficher("", ["L'oiseau s'envole. Le chemin est ouvert."])
+	_verifier_fin_de_zone()
 
 func _sur_puzzle3_resolu() -> void:
-	if not GameManager.zone1_terminee():
+	_verifier_fin_de_zone()
+
+# Appelée après CHAQUE puzzle : les trois peuvent être résolus dans n'importe
+# quel ordre, c'est le dernier — quel qu'il soit — qui révèle le grimoire.
+func _verifier_fin_de_zone() -> void:
+	if not GameManager.zone1_terminee() or _grimoire_annonce:
 		return
+	_grimoire_annonce = true
+	# On laisse retomber l'émotion du dernier puzzle…
 	await get_tree().create_timer(3.0).timeout
+	# … et on attend que son message soit lu, pour ne pas l'écraser.
+	while DialogueManager.est_actif():
+		await DialogueManager.dialogue_fini
 	DialogueManager.afficher("", [
-		"Quelque chose brille dans la vieille maison au nord...",
-		"Une lame du plancher, légèrement soulevée."
+		"Au-delà de la porte du nord, dans la vieille maison de pierre, quelque chose brille.",
+		"Une latte du plancher, à peine soulevée. Comme si on l'avait laissée ainsi exprès."
 	])
 	zone_grimoire.monitoring = true
 
@@ -469,14 +483,14 @@ func _sur_entree_grimoire(body: Node3D) -> void:
 
 func _declencher_grimoire() -> void:
 	DialogueManager.afficher("Grimoire d'Aelindra", [
-		"Un vieux grimoire caché sous les lattes. L'écriture est celle de votre mère.",
-		"\"Pour mes enfants, si jamais ils trouvent ces mots —\"",
-		"\"Je n'ai jamais eu le courage de vous dire qui j'étais vraiment.\"",
-		"\"La Tisserande. Gardienne de l'équilibre entre les peuples.",
-		"\"C'est le titre que je portais avant de choisir une vie ordinaire avec vous.\"",
-		"\"Aldric savait. Depuis le début. Il a choisi de m'aimer quand même.\"",
-		"\"Si vous lisez ceci sans moi, c'est que l'équilibre s'est rompu.\"",
-		"\"À vous de choisir maintenant ce que vous ferez de ce secret.\""
+		"Sous la latte, un grimoire enveloppé de lin. L'écriture penchée de votre mère.",
+		"« Pour Kael et Mira, si un jour ces pages vous trouvent. »",
+		"« Avant d'être votre mère, j'étais la Tisserande : celle qui tient les fils des peuples.",
+		"« Ce fil-là, je l'ai lâché pour vous. J'ai cru que le monde tiendrait sans moi.",
+		"« Il ne tient pas. La lisière s'efface — et vous êtes nés sur la lisière.",
+		"« Votre père savait tout. Il disait que vous seriez plus forts que nous, parce que deux.",
+		"« Je pars recoudre ce que j'ai défait. Ne me cherchez pas trop vite.",
+		"« Ce que vous ferez de ce secret, décidez-le ensemble. C'est le seul conseil que j'aie. »"
 	])
 	# Attend la fin de la lecture (le joueur clique à travers toutes les lignes)
 	await DialogueManager.dialogue_fini
@@ -498,8 +512,8 @@ func _process(_delta: float) -> void:
 	# Re-afficher le choix dès que le panneau est fermé (loop jusqu'au choix)
 	if not DialogueManager._panneau.visible:
 		DialogueManager.afficher("", [
-			"Joueur 1 (A) → Garder le secret entre vous",
-			"Joueur 2 (A) → Le partager avec les villageois"
+			"Garder le grimoire entre vous : Kael (A)   ·   Le confier au village : Mira (A)",
+			"Parlez-en d'abord. Garder le secret : Kael (A)   ·   Le partager : Mira (A)"
 		])
 
 func _appliquer_choix(choix: String) -> void:
@@ -511,18 +525,23 @@ func _appliquer_choix(choix: String) -> void:
 		GameManager.modifier_moralite_kael(-10)
 		GameManager.modifier_moralite_mira(-10)
 		DialogueManager.afficher("", [
-			"Vous refermez le grimoire. C'est entre vous.",
-			"Kael débloque : Résonance",
-			"Mira débloque : Ancrage"
+			"Vous refermez le grimoire. Il ne quittera plus votre sac.",
+			"Kael s'éveille à la Résonance.",
+			"Mira apprend l'Ancrage."
 		])
 	else:
 		GameManager.modifier_moralite_kael(10)
 		GameManager.modifier_moralite_mira(10)
 		DialogueManager.afficher("", [
-			"Vous partagez la nouvelle avec les villageois.",
-			"Kael débloque : Mémoire des Anciens",
-			"Mira débloque : Lecture"
+			"Vous emportez le grimoire jusqu'à la place. Sylvara se tait, puis se souvient.",
+			"Kael s'éveille à la Mémoire des Anciens.",
+			"Mira apprend la Lecture."
 		])
+
+	# Quand ce dernier dialogue est lu, la zone est finie : main.gd prend le
+	# relais (fondu au noir, texte de fin, crédits, retour au menu).
+	await DialogueManager.dialogue_fini
+	GameManager.annoncer_fin_zone1()
 
 # ──────────────────────────────────────────────────────────────────────────────
 # STÈLE DU PACTE D'AELRIC
@@ -535,11 +554,11 @@ func _sur_entree_stele(body: Node3D) -> void:
 		return
 	_stele_lue = true
 	DialogueManager.afficher("Stèle du Pacte d'Aelric", [
-		"En l'an de la grande trêve, par la parole d'Aelindra de Vaelindra",
-		"et d'Aldric d'Arathos, ce Pacte fut scellé.",
-		"Que leurs noms unissent ce que la guerre avait séparé.",
-		"Que ceux qui passent ce seuil sachent qu'ils marchent",
-		"sur les pas d'une promesse."
+		"Le même texte, gravé trois fois : en elfique, en langue d'Arathos, et en signes inconnus.",
+		"« Ici commence la terre neutre, gardée par les Lisières et le Pacte d'Aelric. »",
+		"« Scellé en l'an de la trêve par la Tisserande et Aldric, émissaire d'Arathos. »",
+		"« Que nul ne porte les armes au-delà de cette pierre. »",
+		"« Que ceux qui passent ce seuil marchent sur les pas d'une promesse. »"
 	])
 
 # ──────────────────────────────────────────────────────────────────────────────
