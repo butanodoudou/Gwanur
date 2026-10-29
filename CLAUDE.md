@@ -126,12 +126,19 @@ l'input lui-même. Pour un élément du décor, attache le script `PointInteract
 à son `Area3D` et connecte son signal `active` : tout le reste est automatique
 (prompt dans le HUD, enregistrement, désenregistrement).
 
+Ajouté pendant la finition (2026-10-30, branche `feat/finition-zone1`) :
+- Flux complet : intro (Acte 0) → jeu → fin selon le choix du grimoire → crédits → menu ; menu pause ; deux manettes
+- `scripts/globals/audio_manager.gd` (4ᵉ AutoLoad) + `assets/audio/`, générés par `tools/gen_audio.py` (Python de Blender)
+- PNJ modélisés (`tools/gen_pnj.py`), props des puzzles (`tools/gen_props.py`), lumière d'heure dorée
+- `scripts/ui/textes_narration.gd` : tous les textes d'intro, de fin et de crédits
+- `tools/tests/test_parcours_complet` : joue la Zone 1 entière
+- Équipe d'agents : `.claude/equipe.md` + `.claude/agents/` (locaux, non versionnés)
+
 Ce qui reste à faire :
-- **Son** — au moins un thème Zone 1 + quelques SFX
-- **L'Aelith** — le modèle GLB est présent, l'interaction propre reste à écrire
-- **Polish visuel** — maisons, arbres, Aelith et héros sont modélisés ; restent les **PNJ** (encore des capsules) et les props (puits, tonneaux, charrette, clôtures)
-- **Animation** — aucun squelette : Kael et Mira glissent sans marcher
-- Passe de playtest à deux manettes
+- Faire tourner toute la batterie de tests sur la branche fusionnée, puis corriger ce qu'elle révèle
+- Le nom dans les crédits, et ce qu'il y a de l'autre côté du pont du Puzzle 3
+- **Animation** — toujours aucun squelette (une démarche procédurale fait illusion)
+- Export Windows, puis playtest à deux manettes
 
 Consulte `docs/DECISIONS.md` pour le détail de toutes les décisions prises.
 ⚠️ `docs/archive/` contient des designs **abandonnés** (combat, RPG solo) — ne jamais s'en servir comme référence.

@@ -750,12 +750,76 @@ Les neuf villageois (`pnj.gd`) sont encore des capsules colorées, ce qui se voi
 
 ---
 
+## 2026-10-30 — Finition Zone 1 : décisions de l'équipe
+
+> Consolidé par l'orchestrateur à partir des rapports des six agents.
+
+### Narration (scénariste)
+- **La stèle ne nomme plus Aelindra**, seulement « la Tisserande » et « Aldric, émissaire d'Arathos ». C'est le grimoire qui révèle que la mère était la Tisserande. *Écarté :* garder les deux prénoms (plus de mystère) ou ne nommer personne (plus de révélation dans un jeu réduit à la Zone 1). Le lien Aelric = Ael(indra) + (Ald)ric est laissé au joueur attentif.
+- **Une Tisserande renonce à son nom** : l'Histoire ne retient que le titre, d'où le fait qu'Aelindra ait pu garder son prénom au village. *Écarté :* un faux nom (il aurait fallu réécrire tous les dialogues).
+- **Le jeu tient en une journée** : la mère part dans la nuit, les jumeaux trouvent le lit vide au matin. Les dialogues qui parlaient de « trois jours » ou de « mois » sont harmonisés.
+- **Les jumeaux habitent Sylvara** depuis le Pacte, et le village se tait par affection (Eldwen ne demande plus « vous venez de loin ? »).
+- **Vocabulaire** : le saule central s'appelle « le Rejet », l'oculus « le Trou de Ciel ».
+- **Les indices nomment le jumeau et l'objet** (« Kael… ta corne », « Mira… ta lanterne »), parce que le public cible inclut un non-gamer. La poésie reste dans la phrase.
+
+### Flux de jeu (développeur)
+- **Deux manettes** : Kael = manette 0 + clavier ZQSD/E/A/R, Mira = manette 1 + flèches/Entrée/Maj droit/Ctrl droit. Caméras sur des actions `joueurN_camera_*`, si bien que `project.godot` est le seul endroit qui dit quelle manette appartient à qui. La croix était décalée d'un cran (boutons 12-15 au lieu de 11-14) : corrigé. `ui_accept` inclut le bouton A pour les menus.
+- **Fin de zone par signal** : `GameManager.zone1_finie` est écouté par `main.gd`, qui orchestre intro → jeu → fin → crédits → menu. *Écarté :* que `zone1` appelle `main` directement.
+- **Narration sans pause de l'arbre** : pendant l'intro et la fin, `InteractionManager.suspendre()` et `controles_actifs = false`. `get_tree().paused` reste réservé au menu pause.
+- **Intro seulement si `main` est la scène racine**, pour ne pas casser les tests qui instancient `main.tscn` dans leur propre scène.
+- **Remise à zéro au clic sur « Commencer »** (`GameManager.reinitialiser()`, qui vide aussi l'InteractionManager), un seul point d'entrée par partie.
+- **Fin de zone vérifiée après chaque puzzle**, dans `_verifier_fin_de_zone()` : les puzzles se résolvent dans n'importe quel ordre. Avant, le grimoire n'apparaissait que si le Puzzle 3 était le dernier (blocage).
+- **Le DialogueManager a une file d'attente** (FIFO, sans doublon) : `afficher()` ne remplace plus le dialogue en cours. *Écarté :* des priorités (trop complexe) ou refuser le message (perdu).
+- **Le choix du grimoire passe par `DialogueManager.proposer_choix()`** : les deux options sont affichées ensemble et les appuis ignorés pendant 0,8 s. `zone1.gd` ne lit plus le bouton (règle d'or respectée).
+- **Tout message soumis à un minuteur passe par l'état coop**, jamais par un dialogue : un dialogue ouvert bloque les interactions (le premier appui de Mira au verrou était perdu).
+- **Appui simultané** : fusionné seulement si les deux joueurs visent la même cible.
+- **Corne** : portée de 12 m mesurée à l'horizontale (l'oiseau est à 7,8 m de haut ; avec 8 m en 3D, il ne restait que 1,7 m² de sol utilisable). Retour au joueur s'il est trop loin.
+- **Prérequis Lira** activé (`EXIGER_LIRA = true` en tête de `puzzle_oiseau.gd`), avec un message qui oriente vers elle. Une ligne à changer pour le désactiver.
+- **Prompts** : (E) ou (Entrée) au clavier, (A) à la manette, selon le dernier périphérique touché par CE joueur (`scripts/ui/touches_joueur.gd`).
+- **Démarche procédurale** sur le noeud `Modele` (jamais sur le CharacterBody3D, sinon la collision bouge). L'orientation du personnage ne dépend plus du framerate (`VITESSE_ROTATION = 10` ≈ l'ancien `lerp 0.15` à 60 fps).
+- **Piège Godot rencontré** : on ne peut pas changer `monitoring` d'une Area3D pendant son propre `body_entered` (le grimoire se relançait à chaque entrée). Il faut passer par `set_deferred`.
+
+### Visuel (graphiste)
+- **Heure dorée par la couleur, pas par l'angle du soleil** : soleil doré à 64°, tonemapping ACES, ambiante chaude moins forte, brouillard chaud, SSAO et glow légers. *Écarté :* soleil bas à 20-30°, avec lequel le rempart de 62 m plonge toute la cavité dans l'ombre.
+- **PNJ : 4 silhouettes** (ancien, villageois, villageoise, enfant) et la tunique recolorée par PNJ via le matériau nommé `tunique_pnj`. *Écarté :* un .glb par PNJ. La silhouette est choisie d'après le nom du noeud (surchargeable par `@export silhouette`).
+- **Props des puzzles en enfants du noeud animé** ; la boîte d'origine est cachée, pas supprimée. Si un .glb manque, le jeu retombe sur les boîtes.
+- **Géométrie de niveau corrigée** (bugs du testeur) :
+  - La palissade nord est maintenant **est-ouest** et va jusqu'à la paroi. Avant, elle était nord-sud et on contournait les puzzles.
+  - Une cour fermée entre la grille et la porte ; la grille en est la seule entrée.
+  - Les ouvertures sud, est et ouest du rempart sont fermées côté extérieur (on pouvait faire le tour par dehors).
+  - Le ruisseau barre le passage grâce à une collision invisible, retirée sous le pont quand celui-ci est déployé. *Écarté :* creuser le terrain.
+  - Brennan sort de la collision du moulin (il était inaccessible, donc la zone ne pouvait pas se finir) ; Lira sort du mur de sa maison.
+  - La transform de Zone1 dans `main.tscn` revient à l'identité (Kael apparaissait perché sur le cylindre du saule).
+- **Bug corrigé** : `blender_commun.py` exportait les .glb vers le dépôt principal en chemin dur. Il est maintenant calculé depuis l'emplacement du script.
+- **`capture_zone1.gd` reprend l'éclairage de `main.tscn`** : sa copie avait dérivé, et on jugeait une lumière qui n'était pas celle du jeu.
+
+### Son (sound designer)
+- **Tout l'audio est synthétisé** par `tools/gen_audio.py`, exécuté avec le Python de Blender (qui a numpy) : 3 musiques (ré lydien), 2 ambiances, 22 bruitages, 21,5 Mo. *Écarté :* banques de sons (licences), synthèse en GDScript.
+- **Boucles sans couture par repliement** de la queue sur le début ; les bruits d'ambiance sont périodiques par construction.
+- **Bruitages en 2D, pas en 3D** : avec deux caméras dans deux SubViewports, un son 3D n'a qu'un seul point d'écoute. Léger panoramique (Kael à gauche, Mira à droite) par les bus `SFX_Gauche` et `SFX_Droite` ; le volume du ruisseau dépend de la proximité, calculée à la main.
+- **Un seul fichier pour l'audio** (`AudioManager`) : il trouve seul les noeuds (`node_added`) et lit leur état quand il n'y a pas de signal. Aucun script de jeu n'appelle l'audio, sauf `jouer_fin()`.
+- **Boucle réglée en code** (`loop_mode`), puisque les .import ne sont pas versionnés.
+
+### Tests (testeur)
+- **`test_parcours_complet` joue toute la Zone 1 dans la vraie `main.tscn`.** Trois sortes de lignes : `OK`, `ECHEC` (parcours cassé), `BUG` (défaut connu, non compté ; `-- --strict` les compte). Les placements des héros passent par une requête physique sur leur capsule, jamais par une téléportation aveugle : c'est ce qui a révélé que Brennan était inaccessible.
+- Les contrôles comparent aux constantes du code (`TextesNarration`, `INDICE_GRIMOIRE`) ou à des mots-clés, jamais à des phrases recopiées, pour que le scénariste puisse réécrire sans casser le test.
+
+### Organisation — ce qu'on a appris
+- **Les worktrees d'agents partent parfois d'un vieux commit** (ici c89c7d0, le pivot RPG) au lieu de la branche courante. Chaque agent doit vérifier sa base en premier.
+- **Les agents ne lancent ni Godot ni Blender pendant que l'utilisateur joue** sur la même machine : les fenêtres le dérangent.
+
+---
+
 ## À décider — Zone 1
 
 - [x] Les lettres d'Aldric — lettre 1 livrée par Vaenmor
 - [x] Dialogues de Vaenmor, Lira, Brennan
 - [x] Le contenu exact du grimoire d'Aelindra
-- [ ] La musique — style, instruments (au moins un thème Zone 1)
+- [x] La musique — thème Zone 1, menu, fin (piano, harpe, flûte, cordes, ré lydien)
+- [x] Intro (Acte 0), écran de fin, crédits, menu pause
+- [ ] Nom à mettre dans les crédits (marqueur `[NOM DU DÉVELOPPEUR]`)
+- [ ] Ce qu'il y a de l'autre côté du pont du Puzzle 3 (le bief est fermé et vide)
+- [ ] Export Windows (templates d'export Godot à installer)
 - [x] Le menu principal
 - [x] UI — HUD moralité + indicateur d'interaction (par joueur, dans son SubViewport)
 - [x] UI — retour visuel sur la progression du Puzzle 1 (message d'état coop)
