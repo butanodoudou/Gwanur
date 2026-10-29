@@ -726,6 +726,30 @@ Les neuf villageois (`pnj.gd`) sont encore des capsules colorées, ce qui se voi
 
 ---
 
+## 2026-10-30 — Outillage et organisation de la finition
+
+### On reste sur Godot
+**Contexte :** question posée — vaut-il le coup de passer sur Unreal Engine ?
+**Décision :** Non. Gwanur reste sur Godot 4.6.
+**Alternatives écartées :** migrer vers Unreal Engine 5.
+**Raison :** La Zone 1 est jouable de bout en bout ; migrer, c'est tout réécrire (personnages, puzzles, PNJ, trois AutoLoads, split-screen, HUD, géométrie procédurale) pour revenir au même point, et réapprendre un moteur plus lourd (Blueprints/C++, Actors, GameMode, local players). Les forces d'Unreal (Nanite, Lumen, photoréalisme) ne servent pas un style Ghibli stylisé, et Lumen coûte cher en split-screen (deux rendus par image). L'objectif est de **finir et publier**. Unreal reste une option pour un PROCHAIN projet démarré de zéro.
+
+### MCP Godot
+**Décision :** Le serveur MCP `@coding-solo/godot-mcp` est enregistré dans la config locale de Claude Code (scope projet local, `GODOT_PATH` vers `Godot_v4.6.2-stable_win64_console.exe`).
+**Alternatives écartées :** MCP Unreal (moteur abandonné ci-dessus) ; `youssof20/godot-mcp` (plugin d'éditeur à installer dans le projet) ; `matula/godot-mcp-server`.
+**Raison :** le plus utilisé (~4,6k étoiles, MIT), aucun plugin à ajouter au projet ; il permet à Claude de lancer le jeu et de lire les erreurs sans copier-coller.
+
+### Une équipe d'agents pour finir la Zone 1
+**Décision :** Six rôles définis dans `.claude/agents/` (graphiste, scénariste, développeur, sound designer, testeur, reviewer) + règles communes dans `.claude/equipe.md`. Chaque agent travaille dans son propre worktree git avec un **périmètre de fichiers exclusif**, puis l'orchestrateur fusionne sur `feat/finition-zone1`.
+**Alternatives écartées :** tout faire en séquence dans une seule session (trop long) ; agents en parallèle dans le même dossier (imports Godot concurrents dans `.godot/`, éditions croisées).
+**Raison :** les chantiers restants (son, visuel, textes, flux de jeu, tests) sont indépendants s'ils ne touchent pas les mêmes fichiers.
+**Règles qui en découlent :**
+- Les agents n'écrivent pas dans ce fichier : ils rendent leurs décisions dans leur rapport et l'orchestrateur les consolide ici (sinon conflit de fusion garanti).
+- `scripts/ui/textes_narration.gd` est un **contrat** : le scénariste en écrit le contenu, le développeur ne fait que le lire (constantes `INTRO`, `FIN_SECRET`, `FIN_PARTAGE`, `FIN_COMMUNE`, `CREDITS`).
+- `.claude/` étant ignoré par git, les définitions d'agents restent locales à cette machine.
+
+---
+
 ## À décider — Zone 1
 
 - [x] Les lettres d'Aldric — lettre 1 livrée par Vaenmor
