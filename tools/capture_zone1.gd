@@ -24,32 +24,25 @@ const VUES := [
 	{ "nom": "moulin", "pos": Vector3(-10, 8, -4),   "cible": Vector3(-22, 3, -12) },
 	{ "nom": "ruine",  "pos": Vector3(18, 7, -32),   "cible": Vector3(6, 1, -42) },
 	{ "nom": "ruisseau", "pos": Vector3(-8, 8, -18), "cible": Vector3(-22, 1, -32) },
+	# Vues à hauteur de joueur (la caméra du jeu est à ~9 m derrière le héros)
+	{ "nom": "vaenmor", "pos": Vector3(8, 3.2, 11),  "cible": Vector3(3, 1.2, 2.5) },
+	{ "nom": "porte",   "pos": Vector3(3, 4, -20),   "cible": Vector3(0, 2, -36) },
+	{ "nom": "roue",    "pos": Vector3(-12, 4, -22), "cible": Vector3(-20, 1, -32) },
+	{ "nom": "foule",   "pos": Vector3(4, 4, 26),    "cible": Vector3(10, 1, 14) },
 ]
 
 func _ready() -> void:
-	var env := WorldEnvironment.new()
-	var e := Environment.new()
-	e.background_mode = Environment.BG_SKY
-	var ciel := Sky.new()
-	ciel.sky_material = ProceduralSkyMaterial.new()
-	e.sky = ciel
-	e.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	e.ambient_light_energy = 0.85
-	e.fog_enabled = true
-	e.fog_light_color = Color(0.807843, 0.85098, 0.878431)
-	e.fog_density = 0.0008
-	e.fog_sky_affect = 0.2
-	env.environment = e
-	add_child(env)
-
-	var soleil := DirectionalLight3D.new()
-	soleil.transform = Transform3D(Basis(Vector3(1, 0, 0), deg_to_rad(-68.0)), Vector3(0, 10, 0))
-	soleil.light_color = Color(1, 0.952941, 0.8)
-	soleil.light_energy = 1.2
-	soleil.shadow_enabled = true
-	soleil.shadow_normal_bias = 3.0
-	soleil.directional_shadow_max_distance = 180.0
-	add_child(soleil)
+	# La lumière et le ciel sont ceux du JEU : on les emprunte à main.tscn.
+	# (Avant, l'outil avait sa propre copie de l'Environment — elle dérivait,
+	# et on jugeait une ambiance qui n'était pas celle du jeu.)
+	# instantiate() ne lance aucun _ready() : rien du jeu ne démarre ici.
+	var principale: Node = load("res://scenes/main.tscn").instantiate()
+	for chemin in ["Monde/Environnement", "Monde/LumiereDirectionnelle"]:
+		var noeud: Node = principale.get_node(chemin)
+		noeud.get_parent().remove_child(noeud)
+		noeud.owner = null
+		add_child(noeud)
+	principale.free()
 
 	add_child(load("res://scenes/zones/zone1.tscn").instantiate())
 

@@ -27,7 +27,11 @@ from mathutils import Vector
 #   Blender +X → Godot +X     Blender +Z → Godot +Y     Blender -Y → Godot +Z
 # Donc ce qu'on met en -Y ici regarde le SUD dans Godot.
 
-DOSSIER_ASSETS = r"C:\Users\PC\Documents\repo_git\Gwanur\assets\models"
+# Calculé depuis l'emplacement de CE fichier (tools/ → ../assets/models) :
+# un chemin écrit en dur enverrait les .glb dans un autre dossier que celui où
+# le script est lancé (une copie du repo, un worktree git…).
+DOSSIER_ASSETS = os.path.join(
+	os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets", "models")
 
 # ── Palette ───────────────────────────────────────────────────────────────────
 # Les valeurs sont en sRGB, comme dans decor_village.gd. La conversion vers le
@@ -45,8 +49,11 @@ COULEURS = {
 	# Végétation
 	"ecorce":      (0.36, 0.26, 0.19),
 	"ecorce_pale": (0.78, 0.75, 0.68),   # bouleau
-	"ecorce_aelith": (0.72, 0.68, 0.60), # l'Aelith a l'écorce claire (LORE)
-	"ecorce_aelith_sombre": (0.46, 0.41, 0.34),  # le fond des sillons
+	# L'Aelith a l'écorce claire (LORE) — mais une claire CHAUDE : un gris-beige
+	# neutre, sous le soleil doré, vire au rose saumon et se lit comme du béton.
+	"ecorce_aelith": (0.66, 0.55, 0.42),
+	"ecorce_aelith_sombre": (0.36, 0.27, 0.20),  # le fond des sillons
+	"ecorce_aelith_doree": (0.80, 0.65, 0.44),   # les crêtes qui prennent le soleil
 	"feuille":     (0.29, 0.49, 0.35),
 	"feuille_clair": (0.40, 0.60, 0.38),
 	"feuille_sombre": (0.21, 0.38, 0.28),
