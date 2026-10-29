@@ -8,6 +8,9 @@
 
 extends Node
 
+# Le prompt affiche (E)/(Entrée) au clavier, (A) à la manette (voir le fichier).
+const TouchesJoueur = preload("res://scripts/ui/touches_joueur.gd")
+
 class FausseCible extends Node3D:
 	func obtenir_verbe() -> String:
 		return "Parler a Lira"
@@ -49,7 +52,7 @@ func _ready() -> void:
 	await get_tree().process_frame
 
 	_verifier("Prompt de Kael visible a portee", str(hud_kael._label_prompt.visible), "true")
-	_verifier("Prompt de Kael a le bon texte", hud_kael._label_prompt.text, "(A)  Parler a Lira")
+	_verifier("Prompt de Kael a le bon texte", hud_kael._label_prompt.text, "(%s)  Parler a Lira" % TouchesJoueur.interagir(1))
 	_verifier("Prompt de Mira reste cache", str(hud_mira._label_prompt.visible), "false")
 
 	InteractionManager.retirer(1, cible)

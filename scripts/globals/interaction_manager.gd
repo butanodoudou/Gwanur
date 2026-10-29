@@ -73,15 +73,49 @@ func _process(_delta: float) -> void:
 	if DialogueManager.bloque_interaction():
 		return
 
+	# On note d'abord la cible de CHAQUE joueur, avant de déclencher quoi que ce
+	# soit : déclencher Kael peut ouvrir un dialogue, et on ne veut pas que ça
+	# change ce que Mira visait dans la même frame.
+	var cibles_visees: Dictionary = {}
 	for id_joueur in [1, 2]:
-		if not Input.is_action_just_pressed("joueur%d_interagir" % id_joueur):
+		if Input.is_action_just_pressed("joueur%d_interagir" % id_joueur):
+			var cible := cible_pour(id_joueur)
+			if cible != null:
+				cibles_visees[id_joueur] = cible
+
+	var deja_declenchees: Array = []
+	for id_joueur in cibles_visees:
+		var cible: Node = cibles_visees[id_joueur]
+		# Les deux joueurs appuient en même temps sur LE MÊME objet (ex. Lira) :
+		# une seule interaction, sinon le dialogue s'ouvrirait deux fois.
+		# Deux objets DIFFÉRENTS (les deux poignées de la porte) : les deux comptent.
+		if deja_declenchees.has(cible):
 			continue
-		var cible := cible_pour(id_joueur)
-		if cible != null:
-			cible.declencher(id_joueur)
-			# Une seule interaction par frame, même si les deux joueurs appuient
-			# en même temps sur le même PNJ.
-			return
+		deja_declenchees.append(cible)
+		cible.declencher(id_joueur)
+
+# ──────────────────────────────────────────────────────────────────────────────
+# SUSPENDRE / REPRENDRE / VIDER
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Coupe l'interaction (intro, écran de fin) : plus aucun appui n'est traité.
+# On passe par process_mode = DISABLED : Godot n'appelle plus _process() du tout.
+func suspendre() -> void:
+	process_mode = Node.PROCESS_MODE_DISABLED
+
+# Rend la main aux joueurs. INHERIT = le comportement normal d'un nœud (il
+# s'arrête aussi pendant la pause du jeu, comme tout le reste).
+func reprendre() -> void:
+	process_mode = Node.PROCESS_MODE_INHERIT
+
+func est_suspendu() -> bool:
+	return process_mode == Node.PROCESS_MODE_DISABLED
+
+# Oublie toutes les cibles. L'InteractionManager est un AutoLoad : il survit au
+# changement de scène, et garderait sinon des objets de la partie précédente.
+# Appelée par GameManager.reinitialiser() (nouvelle partie).
+func vider() -> void:
+	_cibles = {1: [], 2: []}
 
 # Kael et Mira s'ajoutent aux groupes "kael" / "mira" dans leur _ready().
 func _trouver_joueur(id_joueur: int) -> Node3D:

@@ -53,7 +53,7 @@ func _ready() -> void:
 # l'InteractionManager : c'est un AutoLoad, il survit à cette scène, et il
 # resterait coupé si on partait pendant une narration.
 func _exit_tree() -> void:
-	InteractionManager.process_mode = Node.PROCESS_MODE_INHERIT
+	InteractionManager.reprendre()
 
 # ──────────────────────────────────────────────────────────────────────────────
 # INTRO — Acte 0
@@ -78,6 +78,8 @@ func _jouer_intro() -> void:
 
 func _jouer_fin() -> void:
 	_figer_jeu(true)
+	# Musique de fin dès le fondu au noir (l'AudioManager coupe les ambiances).
+	AudioManager.jouer_fin()
 	ecran_narration = EcranNarration.new()
 	add_child(ecran_narration)
 	await ecran_narration.fondu_vers_noir(FONDU_FIN_ZONE)
@@ -108,6 +110,6 @@ func _figer_jeu(fige: bool) -> void:
 	for joueur in get_tree().get_nodes_in_group("joueurs"):
 		joueur.controles_actifs = not fige
 	if fige:
-		InteractionManager.process_mode = Node.PROCESS_MODE_DISABLED
+		InteractionManager.suspendre()
 	else:
-		InteractionManager.process_mode = Node.PROCESS_MODE_INHERIT
+		InteractionManager.reprendre()

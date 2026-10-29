@@ -8,6 +8,7 @@
 #
 # Il affiche trois choses :
 #   1. Le prompt d'interaction  — "(A) Parler à Lira", en bas, quand on est à portée
+#                                 ((E) / (Entrée) si ce joueur joue au clavier)
 #   2. Le curseur de moralité   — en haut à gauche, seulement quand il vient de bouger
 #   3. L'état coopératif        — en haut au centre, identique dans les deux vues
 #                                 ("Kael tient sa poignée — en attente de Mira")
@@ -16,6 +17,9 @@
 # Il n'y a donc rien à configurer dans l'éditeur à part id_joueur.
 
 extends Control
+
+# Sait si ce joueur joue au clavier ou à la manette (voir le fichier).
+const TouchesJoueur = preload("res://scripts/ui/touches_joueur.gd")
 
 @export var id_joueur: int = 1
 
@@ -157,6 +161,8 @@ func _valeur_actuelle() -> int:
 # ──────────────────────────────────────────────────────────────────────────────
 
 func _process(delta: float) -> void:
+	# D'abord : ce joueur vient-il de toucher son clavier ou sa manette ?
+	TouchesJoueur.mettre_a_jour(id_joueur)
 	_maj_prompt()
 	_maj_moralite(delta)
 
@@ -171,7 +177,8 @@ func _maj_prompt() -> void:
 		_label_prompt.visible = false
 		return
 
-	_label_prompt.text = "(A)  " + cible.obtenir_verbe()
+	# "(A)" à la manette, "(E)" (Kael) ou "(Entrée)" (Mira) au clavier
+	_label_prompt.text = "(%s)  %s" % [TouchesJoueur.interagir(id_joueur), cible.obtenir_verbe()]
 	_label_prompt.visible = true
 
 func _maj_moralite(delta: float) -> void:

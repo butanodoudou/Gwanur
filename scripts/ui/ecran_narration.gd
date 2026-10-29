@@ -16,9 +16,13 @@
 # PASSER UNE LIGNE
 # Le bouton « interagir » de n'importe quel joueur passe à la ligne suivante.
 # Cet écran lit donc le bouton lui-même : c'est sans danger UNIQUEMENT parce que
-# main.gd coupe l'InteractionManager pendant toute la narration (voir
-# main.gd → _figer_jeu). Sinon, un appui pour passer une ligne pourrait aussi
-# lancer une conversation avec un PNJ proche — le bug historique du projet.
+# main.gd suspend l'InteractionManager pendant toute la narration
+# (InteractionManager.suspendre(), voir main.gd → _figer_jeu). Sinon, un appui
+# pour passer une ligne pourrait aussi lancer une conversation avec un PNJ
+# proche — le bug historique du projet. C'est l'UNIQUE exception à la règle
+# d'or « seuls InteractionManager et DialogueManager lisent interagir » : elle
+# est acceptable car les deux autres lecteurs sont alors muets (Interaction-
+# Manager suspendu, et aucun dialogue n'est ouvert pendant la narration).
 #
 # PAUSE
 # Cet écran s'arrête quand le jeu est en pause (comportement par défaut d'un

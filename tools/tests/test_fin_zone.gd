@@ -59,7 +59,7 @@ func _lancer() -> void:
 	_verifier("L'intro est lancee", str(_main.ecran_narration != null), "true")
 	_verifier("Les joueurs sont figes", str(kael.controles_actifs), "false")
 	_verifier("InteractionManager coupe pendant l'intro",
-		str(InteractionManager.process_mode == Node.PROCESS_MODE_DISABLED), "true")
+		str(InteractionManager.est_suspendu()), "true")
 
 	await _attendre_que(func(): return _texte() == TextesNarration.INTRO[0], 5.0)
 	_verifier("Premiere ligne de l'intro", _texte(), TextesNarration.INTRO[0])
@@ -85,7 +85,7 @@ func _lancer() -> void:
 	_verifier("L'intro se termine", str(_main.ecran_narration == null), "true")
 	_verifier("Les joueurs reprennent la main", str(kael.controles_actifs), "true")
 	_verifier("InteractionManager reactive",
-		str(InteractionManager.process_mode == Node.PROCESS_MODE_INHERIT), "true")
+		str(InteractionManager.est_suspendu()), "false")
 
 	# ── 1 bis. ORDRE DES PUZZLES ─────────────────────────────────────────────
 	# Le grimoire doit apparaître quel que soit le DERNIER puzzle résolu
@@ -149,7 +149,7 @@ func _lancer() -> void:
 	_verifier("« Commencer » a le focus (manette)",
 		(focus as Button).text if focus is Button else "aucun", "Commencer")
 	_verifier("InteractionManager actif au menu",
-		str(InteractionManager.process_mode == Node.PROCESS_MODE_INHERIT), "true")
+		str(InteractionManager.est_suspendu()), "false")
 
 	# A sur la manette = ui_accept : on l'envoie au menu comme un vrai appui.
 	_envoyer_ui(menu, "ui_accept")
