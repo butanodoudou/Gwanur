@@ -62,6 +62,9 @@ func _ready() -> void:
 	await get_tree().process_frame
 	var kael = get_tree().get_first_node_in_group("kael")
 	var mira = get_tree().get_first_node_in_group("mira")
+	# Kael loin de l'oiseau (> 25 m) : sinon le puzzle affiche « approche-toi »
+	# et le blip de ce dialogue devient le dernier son joué, après la corne.
+	kael.global_position = Vector3(-30, 1, 30)
 	kael.corne_sonnee.emit()
 	_verifier("Corne de Kael -> 'corne'", am.dernier_sfx, "corne")
 	kael.lianes_invoquees.emit(Vector3.ZERO)

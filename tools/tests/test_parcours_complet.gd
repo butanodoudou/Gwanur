@@ -238,9 +238,10 @@ func _parler_a(perso: CharacterBody3D, id: int, chemin: String, flag: String) ->
 	_verifier("%s est accessible a pied (zone de dialogue atteignable)" % pnj.nom_pnj,
 		str(accessible), "true")
 	if accessible:
-		_verifier("Prompt '(A)  Parler a %s'" % pnj.nom_pnj,
+		# La touche affichée dépend du périphérique : (A) à la manette, (E) ou (Entrée) au clavier.
+		_verifier("Prompt 'Parler a %s'" % pnj.nom_pnj,
 			hud._label_prompt.text if hud._label_prompt.visible else "(aucun prompt)",
-			"(A)  Parler à " + pnj.nom_pnj)
+			"(%s)  Parler à %s" % [TouchesJoueur.interagir(id), pnj.nom_pnj])
 		await _appuyer("joueur%d_interagir" % id)
 	else:
 		# CONTOURNEMENT pour que la suite du parcours reste testable : on
