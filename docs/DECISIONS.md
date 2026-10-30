@@ -804,6 +804,13 @@ Les neuf villageois (`pnj.gd`) sont encore des capsules colorées, ce qui se voi
 - **`test_parcours_complet` joue toute la Zone 1 dans la vraie `main.tscn`.** Trois sortes de lignes : `OK`, `ECHEC` (parcours cassé), `BUG` (défaut connu, non compté ; `-- --strict` les compte). Les placements des héros passent par une requête physique sur leur capsule, jamais par une téléportation aveugle : c'est ce qui a révélé que Brennan était inaccessible.
 - Les contrôles comparent aux constantes du code (`TextesNarration`, `INDICE_GRIMOIRE`) ou à des mots-clés, jamais à des phrases recopiées, pour que le scénariste puisse réécrire sans casser le test.
 
+### Corrections de la review (développeur, passe 3)
+- **La grille du Puzzle 2 ne retombe jamais sur quelqu'un.** Après les 12 s, elle ne se referme que si personne n'est « derrière » : dans la cour, au nord de la palissade, ou dans une bande de 0,6 m sous la grille. Le test est une fonction de position (`zone1.derriere_la_grille()`) calculée sur les constantes de zone1. *Écarté :* une Area3D créée en code (bornes recopiées, détection seulement à l'entrée). *Raison :* la grille enfermait Kael dans la cour, hors de portée de l'oiseau, ce qui bloquait la partie. Test : `tools/tests/test_cour_oiseau`.
+- **Signaux explicites plutôt que lecture d'état** : `puzzle_oiseau` émet `oiseau_appele` et `grille_changee(ouverte)`, `puzzle_roue_eau` émet `pont_s_avance` et `pont_deploye`. Zone1 et l'AudioManager s'y branchent au lieu d'attendre des durées recopiées à la main. Le ruisseau sonore lit les constantes de zone1.
+- **L'AudioManager liste ce dont il dépend** (`DEPENDANCES_PUZZLES`) et prévient par un `push_warning` si un puzzle ou un signal a disparu. Avant, renommer un fichier coupait le son sans rien dire.
+- **Rien ne tourne pendant la pause**, sauf la musique : pas les bruits de pas, ni les minuteries de gameplay (`create_timer(..., false)`).
+- **La fin vide les dialogues** (`DialogueManager.masquer()`) et la stèle se tait une fois le choix fait.
+
 ### Organisation — ce qu'on a appris
 - **Les worktrees d'agents partent parfois d'un vieux commit** (ici c89c7d0, le pivot RPG) au lieu de la branche courante. Chaque agent doit vérifier sa base en premier.
 - **Les agents ne lancent ni Godot ni Blender pendant que l'utilisateur joue** sur la même machine : les fenêtres le dérangent.
