@@ -76,25 +76,28 @@ size = Vector3(0.3, 0.4, 0.05)
 ; ═════════════════════════════════════════════════════════════════════════════
 ; SCÈNE — Zone 1 : Sylvara, le Village des Lisières
 ;
-; Layout radial centré sur l'Aelith (0, 0, 0).
+; Le village est DANS la cavité de l'Aelith : centre (0, 0, -10), rayon
+; intérieur 56 m (voir zone1.gd, AELITH_*). En (0, 0, 0), la place et le Rejet.
 ; Entrée du village depuis le sud (+Z). Sortie vers Zone 2 au nord (-Z).
-; Rayon du village : ~15m.
+; Les maisons s'étalent jusqu'à ~30 m de la place.
 ;
-; Géométrie procédurale (maisons, puits, palissade) créée dans zone1.gd.
+; zone1.gd pose les COLLISIONS (paroi, maisons, palissades, ruisseau) ;
+; decor_village.gd pose les modèles visibles (maisons, paroi, arbres, props).
 ; ═════════════════════════════════════════════════════════════════════════════
 
 [node name="Zone1" type="Node3D"]
 script = ExtResource("1_zone1")
 
-; ── L'Aelith ─────────────────────────────────────────────────────────────────
-; Nimbus Willow au centre. Scale à ajuster si le modèle est trop petit/grand.
+; ── Le Rejet (nœud nommé « Aelith » pour raisons historiques) ─────────────────
+; Le saule de la place, un rejet de l'Aelith. L'Aelith elle-même, c'est la
+; paroi qui ceinture la zone (posée par decor_village.gd).
 [node name="Aelith" parent="." instance=ExtResource("6_aelith")]
 transform = Transform3D(6, 0, 0, 0, 6, 0, 0, 0, 6, 0, 0, 0)
 
 ; ── PNJ ───────────────────────────────────────────────────────────────────────
 [node name="PNJ" type="Node3D" parent="."]
 
-; Vaenmor — L'Ancien. Assis au pied de l'Aelith, côté sud-est.
+; Vaenmor — L'Ancien. Assis au pied du Rejet (le saule de la place), côté sud-est.
 ; Son honorifique signifie "barbe cendre-vieux". Son vrai nom a été oublié.
 ; Récompense : fragment de lettre 1 + raccourci Zone 2 si l'Épreuve de l'Aelith est résolue.
 [node name="Vaenmor" type="Node3D" parent="PNJ"]
@@ -270,7 +273,7 @@ lignes = [
 shape = SubResource("ss_pnj")
 
 ; ── PUZZLE 1 — La Porte à Deux Poignées ──────────────────────────────────────
-; Bloque le passage vers Zone 2 (nord, z=-18).
+; Bloque le passage vers Zone 2 (nord, z=-36), au fond de la cour de la grille.
 ; Kael et Mira doivent tenir leurs leviers simultanément.
 [node name="Puzzle1PorteDouble" type="Node3D" parent="."]
 script = ExtResource("3_p1")
@@ -343,14 +346,16 @@ shape = SubResource("ss_p2_verrou")
 
 ; ── PUZZLE 3 — La Roue d'Eau ──────────────────────────────────────────────────
 ; Côté ouest du village, près du moulin de Brennan.
-; Un ruisseau (fossé) barre le passage à z=-17.
+; Le ruisseau (z=-30, x de -30.7 à -12.8) ferme le bief ; seul le pont le
+; franchit (collision invisible posée par zone1.gd).
 ; Mira : Lanterne → révèle l'écho de la liane.
 ; Kael : Brassards → fait pousser la liane → roue tourne → pont se déploie.
 [node name="Puzzle3RoueEau" type="Node3D" parent="."]
 script = ExtResource("5_p3")
 
+; ZoneLanterne : au nord du moulin, hors de sa collision (repère tourné du moulin).
 [node name="ZoneLanterne" type="Area3D" parent="Puzzle3RoueEau"]
-position = Vector3(-20.0, 0.0, -16.0)
+position = Vector3(-19.5, 0.0, -17.5)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Puzzle3RoueEau/ZoneLanterne"]
 shape = SubResource("ss_p3_lanterne")

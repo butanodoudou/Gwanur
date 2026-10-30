@@ -50,7 +50,7 @@ const DELAI_CHOIX: float = 0.8
 
 var _panneau: Panel
 var _label_nom: Label
-var _label_texte: Label   # NE PAS RENOMMER : lu en repli par audio_manager.gd et par les tests
+var _label_texte: Label   # NE PAS RENOMMER : lu par les tests (tools/tests/)
 var _label_suite: Label
 var _lignes: Array[String] = []
 var _index_ligne: int = 0

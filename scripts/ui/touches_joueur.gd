@@ -8,7 +8,7 @@
 # COMMENT ON SAIT QUEL PÉRIPHÉRIQUE IL A TOUCHÉ
 # On ne passe pas par _input() : le HUD vit dans un SubViewport, et c'est plus
 # simple (et plus sûr) d'INTERROGER l'état des touches à chaque image. Pour
-# chaque action du joueur ("joueur1_avancer", "joueur1_interagir"…), on regarde
+# chaque action du joueur ("joueur1_haut", "joueur1_interagir"…), on regarde
 # les touches clavier et les boutons/sticks de manette qui lui sont associés
 # dans l'InputMap : si l'un d'eux est enfoncé, on retient ce périphérique.
 #

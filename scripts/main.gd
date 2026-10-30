@@ -81,6 +81,9 @@ func _jouer_intro() -> void:
 # ──────────────────────────────────────────────────────────────────────────────
 
 func _jouer_fin() -> void:
+	# Plus aucun dialogue (ni en attente) : il resterait affiché SOUS l'écran
+	# de fin, et la musique resterait baissée comme pendant un dialogue.
+	DialogueManager.masquer()
 	_figer_jeu(true)
 	# Musique de fin dès le fondu au noir (l'AudioManager coupe les ambiances).
 	AudioManager.jouer_fin()

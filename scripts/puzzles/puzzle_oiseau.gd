@@ -11,6 +11,16 @@
 #   3. Mira doit passer et interagir avec le verrou avant la fermeture
 #   4. Verrou activé → grille reste ouverte définitivement
 #
+# LA GRILLE NE SE REFERME JAMAIS SUR QUELQU'UN
+# Derrière la grille, il n'y a que la cour (et la porte nord, fermée tant que
+# le Puzzle 1 n'est pas fait). Si la grille retombait sur Kael, il ne pourrait
+# plus rappeler l'oiseau (trop loin) : la partie serait bloquée. Donc, quand
+# les 12 s sont écoulées, on regarde où sont les joueurs : tant que l'un
+# d'eux est derrière la grille, elle reste levée (et Mira peut toujours
+# verrouiller, ou ressortir). Elle retombe dès que la cour est vide.
+# Les limites de la cour appartiennent à zone1.gd (Zone1.derriere_la_grille) :
+# on ne les recopie pas ici.
+#
 # Nœuds attendus :
 #   Oiseau               (Node3D)           — l'oiseau, posé sur son perchoir au départ
 #   PlateformePoids      (Area3D)           — repère de la position d'arrivée de l'oiseau
@@ -20,6 +30,16 @@
 extends Node3D
 
 signal puzzle_resolu
+# L'oiseau a entendu la corne et quitte son toit (l'AudioManager le fait chanter).
+signal oiseau_appele
+# La grille vient de se lever (true) ou de retomber (false).
+signal grille_changee(ouverte: bool)
+
+# Le script de la zone, pour savoir où est la cour (voir l'en-tête).
+const Zone1 = preload("res://scripts/zones/zone1.gd")
+# Un joueur à moins de ce nombre de mètres au sud de la grille compte comme
+# « dessous » : on ne lui fait pas tomber la grille sur la tête.
+const MARGE_SOUS_GRILLE: float = 0.6
 
 # Durée d'ouverture de la grille avant refermeture (si Mira n'a pas verrouillé)
 const DUREE_OUVERTURE: float = 12.0
@@ -93,9 +113,17 @@ func _process(delta: float) -> void:
 	# Minuterie de fermeture automatique
 	if grille_ouverte and not verrou_active:
 		_minuterie_fermeture -= delta
-		_annoncer_compte_a_rebours()
-		if _minuterie_fermeture <= 0.0:
+		if _minuterie_fermeture > 0.0:
+			_annoncer_compte_a_rebours()
+			return
+		# Temps écoulé. On ne referme que si personne n'est derrière la grille ;
+		# sinon on attend (on revérifie à chaque image).
+		_minuterie_fermeture = 0.0
+		var dedans: Array = joueurs_derriere_la_grille()
+		if dedans.is_empty():
 			_fermer_grille()
+		else:
+			_annoncer_attente(dedans)
 
 # Les deux joueurs voient le temps qu'il reste à Mira pour atteindre le verrou.
 func _annoncer_compte_a_rebours() -> void:
@@ -105,6 +133,33 @@ func _annoncer_compte_a_rebours() -> void:
 		return
 	var secondes: int = max(int(ceil(_minuterie_fermeture)), 0)
 	GameManager.definir_etat_coop("La grille retombe dans %d s — Mira, cours au verrou !" % secondes)
+
+# Le temps est écoulé mais quelqu'un est encore derrière la grille : l'oiseau
+# tient bon. On dit aux deux joueurs ce qui se passe et ce qu'il reste à faire.
+func _annoncer_attente(dedans: Array) -> void:
+	var mira_dedans := false
+	for joueur in dedans:
+		if joueur.is_in_group("mira"):
+			mira_dedans = true
+	if mira_dedans:
+		GameManager.definir_etat_coop("L'oiseau tremble, mais il tient tant que la cour n'est pas vide. Mira, le verrou !")
+	else:
+		GameManager.definir_etat_coop("L'oiseau tremble, mais il tient bon. Kael, ressors de la cour avant qu'il ne lâche.")
+
+# Les joueurs (Kael, Mira) qui se trouvent derrière la grille en ce moment.
+# Public : le test tools/tests/test_cour_oiseau.gd s'en sert aussi.
+func joueurs_derriere_la_grille() -> Array:
+	var resultat: Array = []
+	var zone := get_parent() as Node3D
+	if zone == null:
+		return resultat
+	for joueur in get_tree().get_nodes_in_group("joueurs"):
+		# Position du joueur dans le repère de la zone (les bornes de la cour
+		# sont données dans ce repère-là).
+		var local: Vector3 = zone.to_local((joueur as Node3D).global_position)
+		if Zone1.derriere_la_grille(local, MARGE_SOUS_GRILLE):
+			resultat.append(joueur)
+	return resultat
 
 func _sur_corne_sonnee() -> void:
 	if oiseau_attire or resolu:
@@ -127,6 +182,7 @@ func _sur_corne_sonnee() -> void:
 		return
 
 	oiseau_attire = true
+	oiseau_appele.emit()
 	# État coop et pas dialogue : la suite est minutée (voir l'en-tête).
 	GameManager.definir_etat_coop("L'oiseau blanc dresse la tête vers la corne... puis se laisse glisser du toit.")
 
@@ -141,6 +197,7 @@ func _ouvrir_grille() -> void:
 	# Le message passe par l'état coop (voir _annoncer_compte_a_rebours) : un
 	# dialogue ici « avalerait » le premier appui de Mira au verrou.
 	_annoncer_compte_a_rebours()
+	grille_changee.emit(true)
 	var tween = create_tween()
 	tween.tween_property(grille, "position", grille.position + Vector3(0, 3.5, 0), 1.0)
 
@@ -153,6 +210,7 @@ func _fermer_grille() -> void:
 	# L'oiseau retourne sur son perchoir
 	oiseau.global_position = position_perchoir
 	DialogueManager.afficher("", ["L'oiseau prend peur et regagne son toit. La grille retombe. Kael, rappelle-le !"])
+	grille_changee.emit(false)
 	var tween = create_tween()
 	tween.tween_property(grille, "position", grille.position - Vector3(0, 3.5, 0), 1.0)
 

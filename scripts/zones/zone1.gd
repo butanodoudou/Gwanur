@@ -4,7 +4,9 @@
 # LE VILLAGE EST DANS LE TRONC DE L'AELITH.
 # L'arbre est si vieux que son tronc s'est creusé ; Sylvara s'est installée
 # dans la cavité. La paroi de bois qui ceinture la zone est son rempart
-# naturel, avec deux ouvertures seulement : l'entrée sud et la sortie nord.
+# naturel. Elle a quatre ouvertures (sud, nord, brèches est et ouest), mais
+# seule la sortie nord mène quelque part : les autres sont fermées côté
+# extérieur (voir _fermer_les_ouvertures_exterieures).
 #
 # Le centre (0, 0, 0) n'est donc PAS un tronc mais la place du village. Le
 # petit saule qui y pousse est un rejet de l'Aelith — l'arbre-enfant au coeur
@@ -12,7 +14,9 @@
 # Entrée depuis le sud (+Z), sortie vers Zone 2 au nord (-Z).
 #
 # Responsabilités :
-#   1. Géométrie procédurale — maisons, puits, palissade, ruisseau (BoxMesh colorés)
+#   1. Géométrie procédurale — les COLLISIONS (paroi, maisons, palissades,
+#      ruisseau), quelques blocs habillés d'un modèle (puits, perchoir, stèle)
+#      et l'eau du ruisseau. Tout le reste du visible vient de DecorVillage.
 #   2. Coordination des puzzles — signaux et état global
 #   3. Grimoire — choix narratif de fin de zone
 
@@ -111,8 +115,13 @@ func _ready() -> void:
 # GÉOMÉTRIE PROCÉDURALE
 # ──────────────────────────────────────────────────────────────────────────────
 #
-# Les BoxMesh colorés sont des placeholders en attendant les vrais assets 3D.
-# L'Aelith (le vrai modèle) est déjà instancié dans zone1.tscn.
+# Ce qui est construit ici est surtout INVISIBLE : des boîtes de collision
+# (paroi, maisons, palissades, ruisseau). Les modèles visibles sont posés par
+# DecorVillage (maisons, paroi et canopée de l'Aelith) ou par _habiller_bloc
+# (puits, perchoir, stèle) ; une boîte colorée ne reste visible que si son
+# modèle .glb manque.
+# Le noeud « Aelith » de zone1.tscn n'est PAS l'Aelith : c'est le Rejet, le
+# saule de la place (voir l'en-tête de ce fichier).
 
 func _construire_village() -> void:
 	# ── Sol ───────────────────────────────────────────────────────────────────
@@ -197,9 +206,24 @@ const Z_GRILLE          := -26.0
 const X_COUR            := 8.0   # demi-largeur de la cour devant la porte
 const DEMI_PORTE        := 4.0   # la porte et la grille font 8 m de large
 
+# Vrai si un point (en coordonnées LOCALES de la zone) est « derrière la
+# grille » : dans la cour, ou plus au nord que la grande palissade (on n'y
+# arrive que par la cour, via la Porte Double). Le Puzzle 2 s'en sert pour ne
+# jamais refermer la grille sur quelqu'un — voir puzzle_oiseau.gd.
+# `marge` avance la limite de la grille vers le sud : un joueur debout SOUS la
+# grille levée compte comme « dedans ».
+# (`static` : on peut l'appeler sans avoir de zone sous la main, depuis le
+# script préchargé — Zone1.derriere_la_grille(point).)
+static func derriere_la_grille(local: Vector3, marge: float = 0.0) -> bool:
+	if local.z < Z_PALISSADE_NORD:
+		return true
+	return local.z < Z_GRILLE + marge and absf(local.x) < X_COUR
+
 # Le ruisseau : un lit de 4 m le long de X. Le pont (5 × 4 m, voir zone1.tscn)
 # part replié sur la rive sud et s'avance de 4 m vers le nord
 # (puzzle_roue_eau.gd) : déployé, il couvre exactement le lit.
+# Ces constantes sont aussi lues par audio_manager.gd (volume du ruisseau) :
+# déplacer le ruisseau ici suffit, le son suit.
 const RUISSEAU_Z        := -30.0  # axe du lit
 const RUISSEAU_LARGEUR  := 4.0
 const RUISSEAU_X_MIN    := -30.7  # bout ouest (palissade du bief)
@@ -317,7 +341,8 @@ func _construire_le_ruisseau() -> void:
 	_gue_ferme = _obstacle_invisible(
 		Vector3((RUISSEAU_X_MIN + x_est) * 0.5, 1.5, RUISSEAU_Z),
 		Vector3(x_est - RUISSEAU_X_MIN, 3.0, RUISSEAU_LARGEUR))
-	puzzle3.puzzle_resolu.connect(_sur_pont_deploye)
+	# Le puzzle prévient quand le pont est posé (fin de son animation).
+	puzzle3.pont_deploye.connect(_sur_pont_deploye)
 
 	# ── Les rives ─────────────────────────────────────────────────────────────
 	var nombre := maxi(1, roundi(longueur / MODULE_BERGE))
@@ -343,10 +368,9 @@ func _construire_le_ruisseau() -> void:
 			module.scale    = Vector3(pas / MODULE_BERGE, 1, 1)
 			add_child(module)
 
-# Le pont commence à s'avancer 1,5 s après la résolution et met 1,5 s
-# (puzzle_roue_eau.gd) : on ouvre le gué quand il est posé.
+# Le pont est posé (signal pont_deploye de puzzle_roue_eau.gd) : on retire
+# l'obstacle invisible qui empêchait de traverser le gué.
 func _sur_pont_deploye() -> void:
-	await get_tree().create_timer(3.0).timeout
 	if is_instance_valid(_gue_ferme):
 		_gue_ferme.queue_free()
 		_gue_ferme = null
@@ -556,6 +580,10 @@ func _sur_entree_stele(body: Node3D) -> void:
 	if not body.is_in_group("joueurs"):
 		return
 	if _stele_lue:
+		return
+	# Le choix du grimoire est fait : la zone se termine (fondu, texte de fin).
+	# Un dialogue de stèle ouvert maintenant resterait caché sous l'écran de fin.
+	if GameManager.choix_grimoire != "":
 		return
 	_stele_lue = true
 	DialogueManager.afficher("Stèle du Pacte d'Aelric", [

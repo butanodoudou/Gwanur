@@ -11,6 +11,7 @@
 #   3. Kael entre dans la ZoneLianes et utilise ses Brassards (X)
 #      → la liane pousse si Mira est en position
 #   4. La liane active la roue → le pont s'étend → chemin ouvert
+#      (signaux pont_s_avance puis pont_deploye, écoutés par zone1.gd et l'AudioManager)
 #
 # Nœuds attendus :
 #   ZoneLanterne    (Area3D)          — où Mira doit se tenir
@@ -23,6 +24,11 @@
 extends Node3D
 
 signal puzzle_resolu
+# Le pont commence à s'avancer sur le ruisseau (l'AudioManager joue « pont »).
+signal pont_s_avance
+# Le pont est posé : zone1.gd ouvre le gué, l'AudioManager joue « resolu ».
+# Émis à la FIN de l'animation : personne n'a à recopier sa durée.
+signal pont_deploye
 
 @onready var zone_lanterne: Area3D = $ZoneLanterne
 @onready var zone_lianes: Area3D = $ZoneLianes
@@ -126,9 +132,12 @@ func _faire_pousser_lianes() -> void:
 	tween.tween_property(lianes, "scale", Vector3(1, 1, 1), 1.0).from(Vector3(1, 0, 1))
 	# Roue tourne (rotation sur Z)
 	tween.tween_property(roue_eau, "rotation", Vector3(0, 0, TAU), 2.0).as_relative()
-	# Pont s'étend après 1.5s
+	# Pont s'étend après 1.5s. Les tween_callback s'exécutent dans l'ordre de
+	# la séquence : le premier quand le pont démarre, le second quand il est posé.
 	var tween2 = create_tween()
 	tween2.tween_interval(1.5)
+	tween2.tween_callback(pont_s_avance.emit)
 	tween2.tween_property(pont, "position", pont.position + Vector3(0, 0, -4.0), 1.5)
+	tween2.tween_callback(pont_deploye.emit)
 
 	puzzle_resolu.emit()

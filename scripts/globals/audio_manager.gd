@@ -29,8 +29,34 @@
 # ceux de Mira à droite, grâce aux bus SFX_Gauche / SFX_Droite.
 # Le ruisseau, lui, doit s'entendre plus fort quand on s'en approche : son
 # volume est calculé à la main à partir du joueur le plus proche.
+#
+# ┌──────────────────────────────────────────────────────────────────────────┐
+# │ SI TU RENOMMES UN DE CES FICHIERS OU SIGNAUX, METS À JOUR CE FICHIER     │
+# │ (sinon le son se tait sans erreur : on ne se branche que sur ce qu'on    │
+# │ reconnaît — un avertissement s'affiche quand main.tscn est chargée)      │
+# │                                                                          │
+# │ Fichiers reconnus par leur NOM (voir _type_script) :                     │
+# │   scripts/puzzles/puzzle_porte_double.gd   signal puzzle_resolu          │
+# │   scripts/puzzles/puzzle_oiseau.gd         signaux puzzle_resolu,        │
+# │                                            oiseau_appele, grille_changee │
+# │   scripts/puzzles/puzzle_roue_eau.gd       signaux puzzle_resolu,        │
+# │                                            pont_s_avance, pont_deploye   │
+# │   scripts/zones/zone1.gd                   constantes RUISSEAU_* (eau)   │
+# │ Signaux reconnus sur n'importe quel nœud :                               │
+# │   corne_sonnee, lianes_invoquees (kael.gd)                               │
+# │   grappin_active, lanterne_activee (mira.gd)                             │
+# │   active (PointInteraction), pressed / focus_entered (boutons)           │
+# │ AutoLoads lus :                                                          │
+# │   DialogueManager : signal ligne_affichee, est_actif()                   │
+# │   GameManager : choix_grimoire                                           │
+# │   InteractionManager : cible_pour(id_joueur)                             │
+# │ Scènes : MUSIQUE_PAR_SCENE et SCENES_AVEC_AMBIANCE ci-dessous.           │
+# └──────────────────────────────────────────────────────────────────────────┘
 
 extends Node
+
+# Le script de la zone : on y lit où coule le ruisseau (constantes RUISSEAU_*).
+const Zone1 = preload("res://scripts/zones/zone1.gd")
 
 # ──────────────────────────────────────────────────────────────────────────────
 # CATALOGUE DES SONS
@@ -81,12 +107,22 @@ const MUSIQUE_PAR_SCENE := {
 # Les scènes jouées dans le village ont l'ambiance (vent, oiseaux, ruisseau).
 const SCENES_AVEC_AMBIANCE := ["res://scenes/main.tscn"]
 
-# Le ruisseau du Puzzle 3, en coordonnées LOCALES de zone1 (voir zone1.gd,
-# _construire_village : « Fond du ruisseau (eau) » 16 × 7,5 m centré en -22, -34).
-const RUISSEAU_CENTRE      := Vector2(-22.0, -34.0)
-const RUISSEAU_DEMI_TAILLE := Vector2(8.0, 3.75)
+# Le ruisseau du Puzzle 3. Sa position et sa taille ne sont PAS recopiées
+# ici : on les lit dans zone1.gd (RUISSEAU_Z, RUISSEAU_LARGEUR, RUISSEAU_X_MIN,
+# RUISSEAU_X_MAX), en coordonnées LOCALES de la zone.
 const RUISSEAU_PORTEE      := 22.0   # au-delà, on ne l'entend plus
 const RUISSEAU_DB          := -3.0
+# Vitesse du lissage du volume du ruisseau (plus grand = plus rapide).
+const LISSAGE_RUISSEAU     := 6.0
+
+# Les puzzles qu'on s'attend à trouver dans main.tscn, et les signaux dont le
+# son a besoin chez chacun. S'il en manque un, on le dit (push_warning).
+const DEPENDANCES_PUZZLES := {
+	"puzzle_porte_double": ["puzzle_resolu"],
+	"puzzle_oiseau":       ["puzzle_resolu", "oiseau_appele", "grille_changee"],
+	"puzzle_roue_eau":     ["puzzle_resolu", "pont_s_avance", "pont_deploye"],
+}
+const SCENE_PRINCIPALE := "res://scenes/main.tscn"
 
 # Bus : nom → [volume par défaut, bus parent, panoramique (0 = aucun)]
 # Les mêmes valeurs sont dans default_bus_layout.tres ; on les recrée ici
@@ -134,12 +170,9 @@ var _instant_scene: float = 0.0        # secondes depuis le dernier changement d
 # Nœuds surveillés (on vérifie is_instance_valid : ils peuvent être libérés)
 var _personnages: Array = []           # CharacterBase, pour les pas
 var _foulee: Dictionary = {}           # instance_id → distance parcourue
-var _puzzles_oiseau: Array = []
-var _etat_oiseau: Dictionary = {}      # instance_id → [oiseau_attire, grille_ouverte]
+var _puzzles_vus: Dictionary = {}      # "puzzle_oiseau" → le nœud (voir _verifier_branchements)
 var _zone: Node3D = null               # zone1, pour situer le ruisseau
 
-var _dialogue_actif_avant: bool = false
-var _dernier_texte_dialogue: String = ""
 var _choix_grimoire_avant: String = ""
 var _cibles_avant: Dictionary = {1: null, 2: null}
 var _attenuation_db: float = 0.0
@@ -152,7 +185,9 @@ var _derniere_nav_ui: int = 0
 # ──────────────────────────────────────────────────────────────────────────────
 
 func _ready() -> void:
-	# Le son continue même si le jeu est mis en pause (menu pause à venir)
+	# L'AudioManager tourne même quand le jeu est en pause (menu pause) : la
+	# musique et les fondus continuent. Les surveillances qui n'ont pas de sens
+	# en pause (pas, cibles) s'arrêtent d'elles-mêmes (voir get_tree().paused).
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_assurer_bus()
 
@@ -172,10 +207,8 @@ func _ready() -> void:
 	# … et ceux qui y sont déjà (si l'AudioManager arrive après eux)
 	_examiner_arbre(get_tree().root)
 
-	# Si une ligne de dialogue est un jour annoncée par un signal, on le préfère
-	# à la surveillance image par image (voir _surveiller_dialogue).
-	if DialogueManager.has_signal("ligne_affichee"):
-		DialogueManager.connect("ligne_affichee", _sur_ligne_affichee)
+	# Un petit « blip » à chaque nouvelle ligne de dialogue.
+	DialogueManager.ligne_affichee.connect(_sur_ligne_affichee)
 
 func _creer_lecteur(bus: String) -> AudioStreamPlayer:
 	var lecteur := AudioStreamPlayer.new()
@@ -372,8 +405,22 @@ func _examiner(noeud: Node) -> void:
 	# ── Puzzles ──
 	if noeud.has_signal("puzzle_resolu"):
 		noeud.connect("puzzle_resolu", _sur_puzzle_resolu.bind(noeud))
-		if _type_script(noeud) == "puzzle_oiseau":
-			_puzzles_oiseau.append(noeud)
+		branche = true
+	if DEPENDANCES_PUZZLES.has(_type_script(noeud)):
+		_puzzles_vus[_type_script(noeud)] = noeud
+	# Puzzle 2 : l'oiseau et la grille
+	if noeud.has_signal("oiseau_appele"):
+		noeud.connect("oiseau_appele", _sur_oiseau_appele)
+		branche = true
+	if noeud.has_signal("grille_changee"):
+		noeud.connect("grille_changee", _sur_grille_changee)
+		branche = true
+	# Puzzle 3 : le pont
+	if noeud.has_signal("pont_s_avance"):
+		noeud.connect("pont_s_avance", _sur_pont_s_avance)
+		branche = true
+	if noeud.has_signal("pont_deploye"):
+		noeud.connect("pont_deploye", _sur_pont_deploye)
 		branche = true
 	# ── Poignées, verrous ──
 	if noeud is PointInteraction:
@@ -427,16 +474,37 @@ func _sur_puzzle_resolu(puzzle: Node) -> void:
 			jouer_sfx("porte")
 			_plus_tard(1.6, "resolu")
 		"puzzle_roue_eau":
-			# Dans le puzzle : la roue tourne tout de suite, le pont part à 1,5 s.
+			# La roue tourne tout de suite. Le pont et le carillon suivent sur
+			# les signaux du puzzle (_sur_pont_s_avance, _sur_pont_deploye).
 			jouer_sfx("roue")
-			_plus_tard(1.5, "pont")
-			_plus_tard(3.2, "resolu")
 		_:
 			# Puzzle de l'oiseau (le verrou a déjà fait « clac ») et tout futur puzzle
 			_plus_tard(0.3, "resolu")
 
+# Puzzle 2 : l'oiseau répond à la Corne, puis s'envole vers la plateforme.
+func _sur_oiseau_appele() -> void:
+	jouer_sfx("oiseau_chant")
+	_plus_tard(0.45, "oiseau_envol")
+
+# Puzzle 2 : la grille se lève ou retombe.
+func _sur_grille_changee(ouverte: bool) -> void:
+	jouer_sfx("grille")
+	if not ouverte:
+		# Le temps est écoulé : l'oiseau repart sur son perchoir
+		jouer_sfx("oiseau_envol", 0, -4.0)
+
+# Puzzle 3 : le pont glisse sur le ruisseau…
+func _sur_pont_s_avance() -> void:
+	jouer_sfx("pont")
+
+# … et se pose : le puzzle est vraiment fini, carillon.
+func _sur_pont_deploye() -> void:
+	jouer_sfx("resolu")
+
+# Joue un bruitage dans `delai` secondes. Le 2e argument de create_timer,
+# false, ARRÊTE la minuterie pendant la pause : pas de son qui part sous le menu.
 func _plus_tard(delai: float, nom: String) -> void:
-	get_tree().create_timer(delai, true).timeout.connect(func(): jouer_sfx(nom))
+	get_tree().create_timer(delai, false).timeout.connect(func(): jouer_sfx(nom))
 
 func _sur_ui_survol() -> void:
 	# Pas de « tic » au tout début d'une scène (focus automatique) ni en rafale
@@ -451,31 +519,27 @@ func _sur_ui_survol() -> void:
 func _sur_ui_presse() -> void:
 	jouer_sfx("ui_validation")
 
-func _sur_ligne_affichee(_a = null, _b = null) -> void:
-	_jouer_blip_dialogue()
-
-func _jouer_blip_dialogue() -> void:
+# Branchée sur DialogueManager.ligne_affichee : ce signal n'a pas d'argument,
+# donc la fonction n'a pas de paramètre (sinon Godot refuse de l'appeler).
+func _sur_ligne_affichee() -> void:
 	# Hauteur variée d'une ligne à l'autre : on « entend » quelqu'un parler
 	jouer_sfx("dialogue", 0, 0.0, randf_range(0.88, 1.15))
 
 # ──────────────────────────────────────────────────────────────────────────────
 # SURVEILLANCE IMAGE PAR IMAGE
 # ──────────────────────────────────────────────────────────────────────────────
-# Certains événements n'ont pas de signal (la grille qui s'ouvre, l'oiseau qui
-# s'envole, une nouvelle ligne de dialogue). On compare l'état d'une image à
-# l'autre : quand une variable bascule, on joue le son. Lecture seule — on ne
+# Certains états n'ont pas de signal (le changement de scène, le choix du
+# grimoire, la cible visée par un joueur, la marche). On compare l'état d'une
+# image à l'autre : quand il bascule, on joue le son. Lecture seule — on ne
 # modifie jamais les autres scripts.
 
 func _process(delta: float) -> void:
 	_instant_scene += delta
 	_surveiller_scene()
-	_surveiller_oiseaux()
-	if not DialogueManager.has_signal("ligne_affichee"):
-		_surveiller_dialogue()
 	_surveiller_choix()
 	_surveiller_cibles()
 	_surveiller_pas(delta)
-	_mettre_a_jour_ruisseau()
+	_mettre_a_jour_ruisseau(delta)
 	_mettre_a_jour_attenuation(delta)
 
 func _surveiller_scene() -> void:
@@ -487,6 +551,8 @@ func _surveiller_scene() -> void:
 	if scene == null:
 		return
 	var chemin := scene.scene_file_path
+	if chemin == SCENE_PRINCIPALE:
+		_verifier_branchements(scene)
 	if MUSIQUE_PAR_SCENE.has(chemin):
 		_fin_en_cours = false
 		jouer_musique(MUSIQUE_PAR_SCENE[chemin])
@@ -497,38 +563,20 @@ func _surveiller_scene() -> void:
 	elif MUSIQUE_PAR_SCENE.has(chemin):
 		_arreter_ambiances(1.5)
 
-func _surveiller_oiseaux() -> void:
-	for puzzle in _puzzles_oiseau:
-		if not is_instance_valid(puzzle):
+# La scène principale vient d'être chargée : chaque puzzle attendu a-t-il été
+# trouvé, avec les signaux dont le son a besoin ? Sinon, un avertissement dans
+# la console (le jeu marche, mais sans ces sons) — voir l'encadré en tête.
+func _verifier_branchements(scene: Node) -> void:
+	for nom_script in DEPENDANCES_PUZZLES:
+		var puzzle = _puzzles_vus.get(nom_script)
+		if puzzle == null or not is_instance_valid(puzzle) or not scene.is_ancestor_of(puzzle):
+			push_warning("AudioManager : aucun nœud avec le script %s.gd dans %s — ses sons ne joueront pas" % [nom_script, scene.scene_file_path])
 			continue
-		var id: int = puzzle.get_instance_id()
-		var attire: bool = puzzle.get("oiseau_attire")
-		var ouverte: bool = puzzle.get("grille_ouverte")
-		var avant: Array = _etat_oiseau.get(id, [false, false])
-		if attire and not avant[0]:
-			# L'oiseau répond à la Corne, puis s'envole vers la plateforme
-			jouer_sfx("oiseau_chant")
-			_plus_tard(0.45, "oiseau_envol")
-		if ouverte != avant[1]:
-			jouer_sfx("grille")
-			if not ouverte:
-				# Le temps est écoulé : l'oiseau repart sur son perchoir
-				jouer_sfx("oiseau_envol", 0, -4.0)
-		_etat_oiseau[id] = [attire, ouverte]
-	_puzzles_oiseau = _puzzles_oiseau.filter(func(p): return is_instance_valid(p))
-
-# DialogueManager n'émet pas de signal par ligne : on regarde le texte affiché.
-# (Si un signal `ligne_affichee` est ajouté un jour, il est utilisé à la place.)
-func _surveiller_dialogue() -> void:
-	var actif: bool = DialogueManager.est_actif()
-	var texte := ""
-	var label = DialogueManager.get("_label_texte")
-	if label is Label:
-		texte = label.text
-	if actif and (not _dialogue_actif_avant or texte != _dernier_texte_dialogue):
-		_jouer_blip_dialogue()
-	_dialogue_actif_avant = actif
-	_dernier_texte_dialogue = texte
+		for nom_signal in DEPENDANCES_PUZZLES[nom_script]:
+			if not puzzle.has_signal(nom_signal):
+				push_warning("AudioManager : %s.gd n'a plus de signal '%s' — son muet" % [nom_script, nom_signal])
+	if _zone == null or not is_instance_valid(_zone) or not scene.is_ancestor_of(_zone):
+		push_warning("AudioManager : zone1.gd introuvable dans %s — le ruisseau restera muet" % scene.scene_file_path)
 
 func _surveiller_choix() -> void:
 	var choix: String = GameManager.choix_grimoire
@@ -538,6 +586,9 @@ func _surveiller_choix() -> void:
 
 # Un petit tintement quand un objet devient interactif pour un joueur.
 func _surveiller_cibles() -> void:
+	# En pause, rien ne bouge : pas de tintement sous le menu.
+	if get_tree().paused:
+		return
 	var im := get_node_or_null("/root/InteractionManager")
 	if im == null:
 		return
@@ -548,6 +599,10 @@ func _surveiller_cibles() -> void:
 		_cibles_avant[id_joueur] = cible
 
 func _surveiller_pas(delta: float) -> void:
+	# En pause, les personnages sont figés mais gardent leur vitesse : sans ce
+	# test, on entendrait des pas sous le menu pause.
+	if get_tree().paused:
+		return
 	for perso in _personnages:
 		if not is_instance_valid(perso) or not perso.is_inside_tree():
 			continue
@@ -595,29 +650,39 @@ func _arreter_ambiances(fondu: float) -> void:
 		_ruisseau.stop())
 
 # Volume du ruisseau selon le joueur le plus proche de l'eau.
-func _mettre_a_jour_ruisseau() -> void:
+func _mettre_a_jour_ruisseau(delta: float) -> void:
 	if not _ruisseau.playing or _fin_en_cours:
 		return
 	if _zone == null or not is_instance_valid(_zone) or not _zone.is_inside_tree():
 		_ruisseau.volume_db = -80.0
 		return
+	# Le lit du ruisseau, vu de dessus : un rectangle (centre + demi-taille).
+	var centre := Vector2((Zone1.RUISSEAU_X_MIN + Zone1.RUISSEAU_X_MAX) * 0.5, Zone1.RUISSEAU_Z)
+	var demi_taille := Vector2((Zone1.RUISSEAU_X_MAX - Zone1.RUISSEAU_X_MIN) * 0.5,
+		Zone1.RUISSEAU_LARGEUR * 0.5)
 	var distance_min := INF
 	for perso in _personnages:
 		if not is_instance_valid(perso) or not perso.is_inside_tree():
 			continue
 		var local: Vector3 = _zone.to_local((perso as Node3D).global_position)
-		var dx: float = maxf(absf(local.x - RUISSEAU_CENTRE.x) - RUISSEAU_DEMI_TAILLE.x, 0.0)
-		var dz: float = maxf(absf(local.z - RUISSEAU_CENTRE.y) - RUISSEAU_DEMI_TAILLE.y, 0.0)
+		# Distance au bord du rectangle (0 si on est au-dessus de l'eau)
+		var dx: float = maxf(absf(local.x - centre.x) - demi_taille.x, 0.0)
+		var dz: float = maxf(absf(local.z - centre.y) - demi_taille.y, 0.0)
 		distance_min = minf(distance_min, sqrt(dx * dx + dz * dz))
 	var gain: float = clampf(1.0 - distance_min / RUISSEAU_PORTEE, 0.0, 1.0)
 	gain *= gain
 	var cible_db: float = linear_to_db(maxf(gain, 0.0001)) + RUISSEAU_DB
-	# Lissage : pas de saut de volume brutal
-	_ruisseau.volume_db = lerpf(_ruisseau.volume_db, cible_db, 0.1)
+	# Lissage : pas de saut de volume brutal. On parcourt à chaque image une
+	# fraction du chemin qui dépend de delta : le même fondu à 30 ou 144 i/s.
+	var fraction: float = 1.0 - exp(-LISSAGE_RUISSEAU * delta)
+	_ruisseau.volume_db = lerpf(_ruisseau.volume_db, cible_db, fraction)
 
 # La musique baisse de quelques dB pendant les dialogues, puis remonte.
+# Jamais pendant la musique de fin : elle doit sonner pleinement.
 func _mettre_a_jour_attenuation(delta: float) -> void:
-	var cible: float = ATTENUATION_DIALOGUE_DB if DialogueManager.est_actif() else 0.0
+	var cible: float = 0.0
+	if DialogueManager.est_actif() and not _fin_en_cours:
+		cible = ATTENUATION_DIALOGUE_DB
 	_attenuation_db = move_toward(_attenuation_db, cible, 6.0 * delta)
 	var idx := AudioServer.get_bus_index("Musique")
 	if idx != -1:
