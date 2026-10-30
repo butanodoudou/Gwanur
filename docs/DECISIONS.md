@@ -547,19 +547,7 @@ Format :
 
 ## 2026-09-12 — Puzzles branchés sur l'UI + nettoyage du code mort
 
-### `PointInteraction` — un script pour tout élément interactif du décor
-**Décision :** Nouveau script `scripts/interaction/point_interaction.gd` (`class_name PointInteraction`, hérite d'`Area3D`), attaché aux poignées du Puzzle 1 et au verrou du Puzzle 2 dans `zone1.tscn`.
-**Raison :** Les puzzles lisaient encore le bouton A dans leur `_process`, comme les PNJ avant correction. Conséquence directe : **aucun prompt ne s'affichait devant une poignée ou un verrou** — le HUD d'interaction ne couvrait que les PNJ.
-**Impact :**
-- `verbe` et `joueur_autorise` se configurent dans l'éditeur ("Tirer la poignée gauche", réservée à Kael)
-- `definir_disponible()` permet d'allumer/éteindre un point selon l'avancement (le verrou n'apparaît que quand la grille est ouverte)
-- Plus aucun puzzle ne lit l'input d'interaction
-
-### Message d'état coopératif
-**Décision :** `GameManager.definir_etat_coop(texte)` pose un message court affiché **en haut des deux vues**, distinct de la boîte de dialogue.
-**Raison :** Sur le Puzzle 1, « Kael s'arc-boute… en attente de Mira » passait dans un dialogue et disparaissait après quelques secondes. Plus rien n'indiquait ensuite que Kael tenait sa poignée — sur le puzzle qui enseigne justement la coopération. Un joueur arrivant après ne voyait jamais le message.
-**Impact :** Le Puzzle 2 s'en sert aussi pour le compte à rebours des 12 secondes. Le message est identique dans les deux vues : les deux joueurs doivent savoir où en est la coop.
-
+s
 ### Code mort supprimé
 **Décision :** Retrait de la plomberie d'interaction inutilisée de `character_base.gd` (`_peut_interagir`, `entrer_zone_interaction`, `quitter_zone_interaction`, `_verifier_interaction`, signal `interaction_declenchee`) et des `interagir()` vides de Kael et Mira.
 **Raison :** `entrer_zone_interaction()` n'était appelé nulle part, donc `_peut_interagir` restait toujours `false` et les `interagir()` ne s'exécutaient jamais. Leurs en-têtes annonçaient « Interagir (A) → Carnet des Anciens », ce qui était faux et trompeur.
@@ -810,6 +798,13 @@ Les neuf villageois (`pnj.gd`) sont encore des capsules colorées, ce qui se voi
 - **L'AudioManager liste ce dont il dépend** (`DEPENDANCES_PUZZLES`) et prévient par un `push_warning` si un puzzle ou un signal a disparu. Avant, renommer un fichier coupait le son sans rien dire.
 - **Rien ne tourne pendant la pause**, sauf la musique : pas les bruits de pas, ni les minuteries de gameplay (`create_timer(..., false)`).
 - **La fin vide les dialogues** (`DialogueManager.masquer()`) et la stèle se tait une fois le choix fait.
+
+### Cible visuelle : Breath of the Wild
+**Contexte :** après un test rapide, l'utilisateur juge le jeu « loin d'un Zelda-like », et les héros glissent sans bouger les jambes.
+**Décision :** la cible visuelle devient **Zelda Breath of the Wild** : cel-shading doux, herbe dense au vent, ciel peint. Les **packs d'assets gratuits CC0** (Quaternius, Kenney…) sont autorisés en plus des modèles générés par script. Chaque pack est tracé dans `assets/models/vegetation/LICENCES.md`.
+**Alternatives écartées :** Wind Waker (toon franc, plus « dessin animé ») ; Link's Awakening (effet jouet, moins Ghibli) ; rester 100 % généré par script.
+**Raison :** BotW est le plus proche de l'ambiance Ghibli d'ART_DIRECTION.md. Le gain vient surtout du **rendu** (shader toon, feuillage, herbe, ciel), pas du nombre de polygones. Pour la végétation, des packs CC0 font mieux que nos scripts, pour bien moins d'effort.
+**Héros :** squelette et animations (idle, marche, course) générés par script Blender, à la place de la seule démarche procédurale.
 
 ### Organisation — ce qu'on a appris
 - **Les worktrees d'agents partent parfois d'un vieux commit** (ici c89c7d0, le pivot RPG) au lieu de la branche courante. Chaque agent doit vérifier sa base en premier.
