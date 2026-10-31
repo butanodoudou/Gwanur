@@ -85,6 +85,7 @@ func construire(maisons: Array) -> void:
 	_remplir_le_village()
 	_allumer_les_lanternes()
 	_batir_la_vieille_maison()
+	preload("res://scripts/zones/herbe.gd").semer(self, _maisons)  # l'herbe au vent (en dernier : elle évite le décor)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # L'AELITH

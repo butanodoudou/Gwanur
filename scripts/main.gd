@@ -35,6 +35,13 @@ func _ready() -> void:
 	if cam_mira:
 		mira.camera_ref = cam_mira
 
+	# Rendu « Breath of the Wild » : Kael, Mira (la zone s'est déjà stylisée
+	# elle-même), tout ce qui apparaîtra en cours de partie, et les rayons de
+	# soleil qui tombent du Trou de Ciel (voir scripts/rendu/).
+	preload("res://scripts/rendu/stylisation.gd").styliser($Monde)
+	preload("res://scripts/rendu/stylisation.gd").suivre(get_tree())
+	preload("res://scripts/rendu/rayons_oculus.gd").poser($Monde/Zone1, $Monde/LumiereDirectionnelle)
+
 	menu_pause = MenuPause.new()
 	add_child(menu_pause)
 

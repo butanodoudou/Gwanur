@@ -31,7 +31,20 @@ const VUES := [
 	{ "nom": "foule",   "pos": Vector3(11, 2.6, 13),  "cible": Vector3(16, 1, 20) },
 	{ "nom": "villageoises", "pos": Vector3(-6, 3, 17), "cible": Vector3(-10, 1, 10) },
 	{ "nom": "pnj_proche", "pos": Vector3(6.5, 1.9, 7.5), "cible": Vector3(4, 1.0, 3.5) },
+	# Kael et Mira dans l'herbe, cadrés comme par la caméra du jeu (~9 m derrière)
+	{ "nom": "heros", "pos": Vector3(1.5, 4.5, 38), "cible": Vector3(0, 1.2, 28) },
+	{ "nom": "heros_proche", "pos": Vector3(2.6, 1.7, 31.5), "cible": Vector3(0, 1.0, 28) },
+	# La prairie en grand, vue d'à peine plus haut qu'un héros
+	{ "nom": "prairie", "pos": Vector3(0, 3.2, 40), "cible": Vector3(-10, 1.0, 22) },
+	{ "nom": "prairie_haut", "pos": Vector3(0, 22, 46), "cible": Vector3(0, 0, 14) },
 ]
+
+# Où poser les héros pour les vues « heros » (sur le chemin de l'entrée sud,
+# entre deux prairies), tournés vers la caméra.
+const HEROS := {
+	"kael": [Vector3(-0.8, 0, 28), 0.35],
+	"mira": [Vector3(0.7, 0, 28.4), -0.25],
+}
 
 func _ready() -> void:
 	# La lumière et le ciel sont ceux du JEU : on les emprunte à main.tscn.
@@ -46,7 +59,20 @@ func _ready() -> void:
 		add_child(noeud)
 	principale.free()
 
-	add_child(load("res://scenes/zones/zone1.tscn").instantiate())
+	var zone: Node3D = load("res://scenes/zones/zone1.tscn").instantiate()
+	add_child(zone)
+	# Comme main.gd : les rayons de soleil du Trou de Ciel.
+	preload("res://scripts/rendu/rayons_oculus.gd").poser(zone, $LumiereDirectionnelle)
+
+	# Les héros, immobiles (PROCESS_MODE_DISABLED : ni gravité ni commandes),
+	# stylisés comme le fait main.gd en jeu.
+	for nom in HEROS:
+		var heros: Node3D = load("res://scenes/characters/" + nom + ".tscn").instantiate()
+		heros.process_mode = Node.PROCESS_MODE_DISABLED
+		heros.position = HEROS[nom][0]
+		heros.rotation.y = HEROS[nom][1]
+		add_child(heros)
+		preload("res://scripts/rendu/stylisation.gd").styliser(heros)
 
 	DirAccess.make_dir_recursive_absolute(SORTIE)
 

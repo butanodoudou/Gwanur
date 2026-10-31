@@ -110,6 +110,8 @@ func _ready() -> void:
 	_coloriser_puzzles()
 	_configurer_echo_liane()
 	_connecter_puzzles()
+	# Rendu « Breath of the Wild » : convertit tous les matériaux de la zone.
+	preload("res://scripts/rendu/stylisation.gd").styliser(self)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # GÉOMÉTRIE PROCÉDURALE
