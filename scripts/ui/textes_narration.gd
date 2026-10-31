@@ -38,6 +38,14 @@ const FIN_PARTAGE: Array[String] = [
 	"Mais un nom qui passe de bouche en bouche finit toujours par franchir l'écorce.",
 ]
 
+# Seulement si les jumeaux ont trouvé la fleur du bief (GameManager.fleur_trouvee),
+# entre la fin du choix et la fin commune. La fleur qui ne fane pas : Kael y lit
+# un signe que leur mère est vivante ; Mira ne le dit pas, mais elle y croit.
+const FIN_FLEUR: Array[String] = [
+	"Au bord du bief, la fleur sans nom ne s'est pas fanée.",
+	"Kael dit que c'est un signe. Mira hausse les épaules — mais c'est elle qui y retourne.",
+]
+
 # Dernières lignes, communes aux deux fins, avant les crédits.
 const FIN_COMMUNE: Array[String] = [
 	"Au matin, ils passent la porte du nord, côte à côte.",

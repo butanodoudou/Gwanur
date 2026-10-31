@@ -638,7 +638,7 @@ func _reperer_les_points_importants() -> void:
 	if zone == null:
 		return
 	for nom in ["PNJ", "Puzzle1PorteDouble", "Puzzle2Oiseau", "Puzzle3RoueEau",
-			"ZoneGrimoire", "ZoneStele"]:
+			"ZoneGrimoire", "ZoneStele", "FleurBief"]:
 		var noeud := zone.get_node_or_null(nom)
 		if noeud == null:
 			continue

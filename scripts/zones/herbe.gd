@@ -198,6 +198,12 @@ func _creuser_la_zone(zone: Node) -> void:
 		["Puzzle3RoueEau/Pont", 3.2],
 		["Puzzle1PorteDouble/ZoneInteractionKael", 0.8],
 		["Puzzle1PorteDouble/ZoneInteractionMira", 0.8],
+		# La fleur du bief, sa touffe et ses pétales tombés : l'herbe ne doit
+		# pas les noyer, c'est eux qui guident le regard depuis le pont.
+		["FleurBief", 0.9],
+		["FleurBief/Touffe", 0.6],
+		["FleurBief/TouffePres", 0.6],
+		["FleurBief/Petales", 1.6],
 	]:
 		var n := zone.get_node_or_null(donnees[0]) as Node3D
 		if n != null:

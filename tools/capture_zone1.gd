@@ -5,6 +5,9 @@
 # Lancer :
 #   godot --path . res://tools/capture_zone1.tscn --resolution 1280x720
 #
+# Pour ne prendre que certaines vues (plus rapide) :
+#   godot --path . res://tools/capture_zone1.tscn -- --vues=fleur_pont,fleur_proche
+#
 # Les images arrivent dans tools/captures/ (dossier ignoré par git).
 # Pour ajouter un point de vue, ajoute une ligne dans VUES : "pos" est la
 # position de la caméra, "cible" le point qu'elle regarde.
@@ -37,6 +40,10 @@ const VUES := [
 	# La prairie en grand, vue d'à peine plus haut qu'un héros
 	{ "nom": "prairie", "pos": Vector3(0, 3.2, 40), "cible": Vector3(-10, 1.0, 22) },
 	{ "nom": "prairie_haut", "pos": Vector3(0, 22, 46), "cible": Vector3(0, 0, 14) },
+	# La fleur du bief, vue depuis le pont du Puzzle 3 (caméra de jeu ~9 m
+	# derrière un héros posé sur le pont), puis de près.
+	{ "nom": "fleur_pont", "pos": Vector3(-30, 4.0, -21.5), "cible": Vector3(-23, 0.4, -33.5) },
+	{ "nom": "fleur_proche", "pos": Vector3(-23.5, 1.6, -31.0), "cible": Vector3(-20.5, 0.45, -34.6) },
 ]
 
 # Où poser les héros pour les vues « heros » (sur le chemin de l'entrée sud,
@@ -80,7 +87,15 @@ func _ready() -> void:
 	cam.current = true
 	add_child(cam)
 
+	# -- --vues=a,b : seulement ces vues-là.
+	var filtre: PackedStringArray = []
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--vues="):
+			filtre = arg.trim_prefix("--vues=").split(",")
+
 	for vue in VUES:
+		if not filtre.is_empty() and not filtre.has(vue["nom"]):
+			continue
 		cam.position = vue["pos"]
 		cam.look_at(vue["cible"], Vector3.UP)
 		for i in 5:
