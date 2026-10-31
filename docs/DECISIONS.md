@@ -806,6 +806,27 @@ Les neuf villageois (`pnj.gd`) sont encore des capsules colorées, ce qui se voi
 **Raison :** BotW est le plus proche de l'ambiance Ghibli d'ART_DIRECTION.md. Le gain vient surtout du **rendu** (shader toon, feuillage, herbe, ciel), pas du nombre de polygones. Pour la végétation, des packs CC0 font mieux que nos scripts, pour bien moins d'effort.
 **Héros :** squelette et animations (idle, marche, course) générés par script Blender, à la place de la seule démarche procédurale.
 
+### Rendu BotW (graphiste rendu)
+- **Le soleil éclairait par en dessous.** L'axe -Z de la `DirectionalLight3D` de `main.tscn` pointait vers le haut : le sol, les toits et l'herbe ne recevaient que la lumière ambiante, d'où une bonne part de l'aspect terne. Le soleil est remis à 62° d'élévation.
+- **Conversion automatique des matériaux** : `scripts/rendu/stylisation.gd` convertit au chargement chaque `StandardMaterial3D` en matériau toon (2 paliers doux, ombres teintées froides, liseré lumineux). Il gère les .glb, les boîtes construites en code, les MultiMesh et les meshes skinnés, avec un seul matériau toon par matériau d'origine. Les feuillages (`feuill`, `leaf`, `foliage`, `aiguille`) reçoivent du vent et des normales sphériques. *Écarté :* retoucher chaque modèle, ou un post-traitement plein écran. Interrupteur pour comparer : `const ACTIVE` ou `-- --sans-toon`.
+- **Herbe en parcelles MultiMesh de 8 m** (`scripts/zones/herbe.gd`) : environ 9 touffes/m², vent en vagues, brins qui s'écartent sous les héros, aucune herbe sur les chemins, les maisons ni les pièces de puzzle. *Écarté :* un seul MultiMesh (aucun culling possible) ou des particules GPU.
+- **Ciel peint** avec nuages qui dérivent ; **rayons de lumière par l'oculus** en cylindres additifs. *Écarté :* le brouillard volumétrique, payé deux fois en split-screen.
+- **Pas de contours** : BotW n'en a presque pas, ses silhouettes se lisent par le liseré et les ombres teintées. Des contours tireraient vers Wind Waker.
+- **Coût mesuré** (RX 6600, 1080p, deux vues) : de 150 à 200 fps, environ 3 ms GPU par vue. Le toon seul coûte 0,1 à 0,2 ms par vue. Outil : `tools/mesure_fps.tscn`.
+
+### Végétation CC0 (graphiste végétation)
+- **Pack Quaternius « Ultimate Nature »** (CC0 1.0, vérifié sur la page officielle et dans le `License.txt` du pack) : 29 modèles, tracés dans `assets/models/vegetation/LICENCES.md`. *Écarté :* le Stylized Nature MegaKit (sur itch.io, non téléchargeable automatiquement).
+- **Recoloration par script Blender versionné** (`tools/recolor_cc0.py`) : couleurs unies de la palette, et les matériaux de feuillage s'appellent `feuillage*`. Les .fbx sources ne sont pas versionnés (`tools/sources_cc0/` est dans le .gitignore).
+- **Composition** : 42 bosquets d'une seule famille d'arbres, avec des clairières entre eux. Petits éléments en cases de 20 m, parce que `visibility_range_end` ne sert à rien sur un MultiMesh qui couvre tout le village. Les ordres de dessin baissent d'environ 40 %.
+- **Protection automatique des puzzles** : les PNJ et les pièces de puzzle sont relevés dans la scène, et rien ne pousse près d'eux. Des couloirs de vue restent dégagés vers l'oiseau et vers la roue.
+
+### Animation (animateur)
+- **Squelette par script** (`tools/animer_personnages.py`) : 15 os, chaque pièce rigide rattachée à un seul os avec un poids de 1.0. *Écarté :* des poids automatiques (coudes « en caoutchouc »).
+- **Animations calculées en Python** : idle, marche, course, interagir, skill1, skill2. Pour la marche et la course, on place le pied puis on en déduit la jambe, donc les pieds ne patinent pas. *Écarté :* des animations Mixamo ou CC0, qu'il faudrait recibler sur notre squelette.
+- **Contrat de foulée** : 1,2 m (marche) et 3,0 m (course) par cycle de 1 s, partagé par le .py et `character_base.gd` ; la vitesse de lecture vaut vitesse / foulée.
+- **AnimationTree construit en code**. Les gestes ne jouent que sur le haut du corps, donc les jambes continuent de marcher. Accélération 30 m/s² et freinage 36 m/s², sans changer la vitesse max (5 m/s), donc les timings des puzzles restent les mêmes.
+- **PNJ** : même squelette, idle animée, ils tournent doucement le corps vers le joueur le plus proche (6 m, 70° au plus).
+
 ### Organisation — ce qu'on a appris
 - **Les worktrees d'agents partent parfois d'un vieux commit** (ici c89c7d0, le pivot RPG) au lieu de la branche courante. Chaque agent doit vérifier sa base en premier.
 - **Les agents ne lancent ni Godot ni Blender pendant que l'utilisateur joue** sur la même machine : les fenêtres le dérangent.

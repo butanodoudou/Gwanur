@@ -137,8 +137,13 @@ Ajouté pendant la finition (2026-10-30, branche `feat/finition-zone1`) :
 Ce qui reste à faire :
 - Faire tourner toute la batterie de tests sur la branche fusionnée, puis corriger ce qu'elle révèle
 - Le nom dans les crédits, et ce qu'il y a de l'autre côté du pont du Puzzle 3
-- **Animation** — toujours aucun squelette (une démarche procédurale fait illusion)
 - Export Windows, puis playtest à deux manettes
+
+Rendu et animation (2026-10-31) — cible visuelle **Breath of the Wild** :
+- `scripts/rendu/stylisation.gd` convertit TOUS les matériaux en toon au chargement : un nouveau modèle n'a rien à faire de spécial. Feuillage = matériau dont le nom contient « feuill ».
+- `scripts/zones/herbe.gd` (herbe au vent), `shaders/` (toon, sol, terre, herbe, ciel, rayons de lumière)
+- Végétation : pack CC0 Quaternius dans `assets/models/vegetation/` — toute nouvelle source d'assets doit être tracée dans `LICENCES.md`
+- Kael, Mira et les PNJ ont un squelette et des animations (`tools/animer_personnages.py`, appelé par `gen_personnages.py` / `gen_pnj.py`), pilotés par un AnimationTree construit dans `character_base.gd`
 
 Consulte `docs/DECISIONS.md` pour le détail de toutes les décisions prises.
 ⚠️ `docs/archive/` contient des designs **abandonnés** (combat, RPG solo) — ne jamais s'en servir comme référence.
