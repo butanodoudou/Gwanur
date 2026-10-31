@@ -16,9 +16,9 @@
 # à la rotation 0, le personnage doit donc regarder vers +Z de Godot, soit
 # -Y dans Blender. Tout ce qui est au visage va en -Y.
 #
-# PAS D'ANIMATION
-# Ce sont des maillages fixes. Le jeu n'a pas encore de squelette ni
-# d'AnimationPlayer ; les personnages glissent. Le rig viendra après.
+# ANIMATION
+# Ce fichier construit les maillages ; le squelette et les animations sont
+# ajoutés par tools/animer_personnages.py (appelé par le main ci-dessous).
 #
 # Usage :
 #   blender --background --python tools/gen_personnages.py
@@ -235,12 +235,8 @@ def mira():
 # ──────────────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-	for nom_fichier, graine, fabrique in [
-		("kael.glb", 11, kael),
-		("mira.glb", 22, mira),
-	]:
-		vider_la_scene()
-		random.seed(graine)
-		fabrique()
-		# Personnages lissés : sur un corps, les facettes dures font armure.
-		exporter(SOUS_DOSSIER, nom_fichier, lisse=False)
+	# Le squelette et les animations sont ajoutés par animer_personnages.py,
+	# qui reconstruit les modèles avec les fonctions de ce fichier. Lancer ce
+	# script-ci ou l'autre revient donc au même.
+	import animer_personnages
+	animer_personnages.generer_heros()

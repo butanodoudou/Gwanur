@@ -81,6 +81,7 @@ func construire(maisons: Array) -> void:
 	_planter_la_foret()
 	_semer_herbe_et_fleurs()
 	_poser_les_rochers()
+	_verser_les_multimesh()       # toute la végétation d'un coup, en MultiMesh
 	_habiller_le_puits()
 	_remplir_le_village()
 	_allumer_les_lanternes()
@@ -218,97 +219,287 @@ func _dalles_entre(depart: Vector3, arrivee: Vector3, largeur: float, nombre: in
 		_prop(dalle, pos, teinte, _rng.randf_range(-0.25, 0.25))
 
 # ──────────────────────────────────────────────────────────────────────────────
-# FORÊT
+# VÉGÉTATION : ARBRES, SOUS-BOIS, FLEURS, ROCHERS
 # ──────────────────────────────────────────────────────────────────────────────
 #
-# Les arbres sont des modèles Blender (`tools/gen_arbres.py`), affichés en
+# Les modèles viennent du pack CC0 « Ultimate Nature Pack » de Quaternius,
+# recolorés à la palette du jeu par `tools/recolor_cc0.py` (provenance et
+# licence : assets/models/vegetation/LICENCES.md). Ils sont affichés en
 # MULTIMESH.
 #
 # POURQUOI UN MULTIMESH
-# Un MeshInstance3D par arbre = un ordre de dessin par arbre. Avec ~190 arbres
-# et l'écran splitté (la scène est rendue DEUX fois par image), ça fait 380
-# ordres de dessin rien que pour la forêt. Un `MultiMeshInstance3D` dessine
-# TOUS les arbres d'une même essence en un seul ordre : on passe à 4.
-# Le prix à payer : tous les arbres d'une essence partagent le même maillage,
-# donc la variété doit venir de la rotation et de l'échelle.
+# Un MeshInstance3D par plante = un ordre de dessin par plante. Avec des
+# centaines de plantes et l'écran splitté (la scène est rendue DEUX fois par
+# image), c'est intenable. Un `MultiMeshInstance3D` dessine TOUTES les copies
+# d'un même modèle en un seul ordre (un par matériau du modèle).
+# Le prix à payer : toutes les copies partagent le même maillage, donc la
+# variété vient de la rotation, de l'échelle… et du nombre de modèles.
+#
+# LA COMPOSITION (ce qui fait « Breath of the Wild » plutôt que « semis »)
+#   - des BOSQUETS d'une même famille d'arbres (chênaie, boulaie, pinède), avec
+#     leur sous-bois de fougères et de buissons, et des CLAIRIÈRES entre eux ;
+#   - des LISIÈRES de buissons le long des maisons, des clôtures et de la
+#     palissade nord — c'est là que la végétation pousse dans un vrai village ;
+#   - des fleurs en TOUFFES d'une même couleur, jamais semées une par une ;
+#   - des rochers moussus en petits GROUPES (un gros, deux ou trois petits).
 
-const ESSENCES := {
-	"arbre_chene":   { "hauteur": 10.5, "rayon_tronc": 0.50 },
-	"arbre_erable":  { "hauteur":  7.5, "rayon_tronc": 0.36 },
-	"arbre_pin":     { "hauteur":  8.2, "rayon_tronc": 0.40 },
-	"arbre_bouleau": { "hauteur":  8.1, "rayon_tronc": 0.28 },
+const DOSSIER_VEGETATION := "res://assets/models/vegetation/quaternius/"
+
+# Les modèles utilisés, et ce que le décor doit savoir de chacun :
+#   hauteur      — hauteur du modèle à l'échelle 1, en mètres (pour la collision)
+#   rayon_tronc  — rayon de la collision cylindre ; 0 = on traverse (buissons…)
+#                  Valeurs affichées par tools/recolor_cc0.py (« rayon_tronc »).
+#   portee       — distance au-delà de laquelle on ne dessine plus (0 = toujours).
+#                  Une fleur à 40 m fait un pixel : autant ne pas la dessiner.
+#   ombre        — false pour les petites plantes : leur ombre ne se voit pas,
+#                  mais elle coûte un second passage de dessin.
+const VEGETATION := {
+	# Arbres
+	"feuillu_large_1": { "hauteur": 11.0, "rayon_tronc": 0.38 },  # grands chênes
+	"feuillu_large_2": { "hauteur": 12.5, "rayon_tronc": 0.43 },
+	"feuillu_haut":    { "hauteur":  9.5, "rayon_tronc": 0.25 },
+	"feuillu_rond":    { "hauteur":  7.5, "rayon_tronc": 0.26 },
+	"feuillu_jeune":   { "hauteur":  7.0, "rayon_tronc": 0.30 },
+	"feuillu_dore":    { "hauteur": 10.0, "rayon_tronc": 0.35 },  # rappel de l'Aelith
+	"bouleau_1":       { "hauteur":  9.0, "rayon_tronc": 0.22 },
+	"bouleau_2":       { "hauteur": 11.0, "rayon_tronc": 0.19 },
+	"pin_1":           { "hauteur": 11.0, "rayon_tronc": 0.45 },
+	"pin_2":           { "hauteur":  9.5, "rayon_tronc": 0.45 },
+	"pin_3":           { "hauteur": 10.5, "rayon_tronc": 0.50 },
+	"saule":           { "hauteur":  8.5, "rayon_tronc": 0.70 },
+	# Sous-bois — traversables
+	"buisson_1":       { "portee": 70.0 },
+	"buisson_2":       { "portee": 70.0 },
+	"buisson_baies":   { "portee": 55.0 },
+	"fougere_basse":   { "portee": 35.0, "ombre": false },
+	"fougere":         { "portee": 35.0, "ombre": false },
+	"fougere_large":   { "portee": 40.0, "ombre": false },
+	"fleurs_touffe":   { "portee": 30.0, "ombre": false },
+	"fleurs_hautes":   { "portee": 30.0, "ombre": false },
+	# Minéral et bois mort — traversables, comme les anciens rochers
+	"rocher_1":        { "portee": 60.0 },
+	"rocher_2":        {},
+	"rocher_moussu_1": { "portee": 50.0 },
+	"rocher_moussu_2": { "portee": 50.0 },
+	"rocher_moussu_3": { "portee": 50.0 },
+	"rocher_moussu_4": {},
+	"rocher_moussu_5": {},
+	"souche":          { "portee": 50.0 },
+	"tronc_couche":    { "portee": 60.0 },
 }
 
-# Les plantations en attente, rangées par essence, avant d'être versées dans
-# les MultiMesh : { "arbre_chene": [Transform3D, ...], ... }
+# Les familles de bosquets : un bosquet tire ses arbres dans UNE liste. C'est ce
+# qui donne des taches lisibles (le bois de bouleaux, le coin des pins) au lieu
+# d'un mélange uniforme.
+const BOSQUETS := {
+	"chenaie": ["feuillu_large_1", "feuillu_large_2", "feuillu_large_1", "feuillu_rond"],
+	"boulaie": ["bouleau_1", "bouleau_2", "bouleau_2", "feuillu_jeune"],
+	"pinede":  ["pin_1", "pin_2", "pin_3"],
+	"mixte":   ["feuillu_haut", "feuillu_rond", "feuillu_jeune", "bouleau_1", "pin_2"],
+}
+
+# Taille des « cases » qui découpent les petits éléments (fleurs, fougères…)
+# en plusieurs MultiMesh. Voir `_verser_les_multimesh()`.
+const CASE_VEGETATION := 20.0
+
+# Les plantations en attente, rangées par modèle, avant d'être versées dans les
+# MultiMesh : { "pin_1": [Transform3D, ...], ... }
 var _plantations: Dictionary = {}
+# Le pied de chaque arbre déjà planté (x, z, rayon d'encombrement) : deux
+# arbres ne poussent pas l'un dans l'autre.
+var _arbres: Array = []
+# Ce que la végétation ne doit JAMAIS cacher : les PNJ et les pièces des puzzles.
+# Rempli par `_reperer_les_points_importants()`.
+var _points_importants: Array = []
 
 func _planter_la_foret() -> void:
-	# Une couronne d'arbres autour du village : on ne voit plus le bord du sol,
-	# et le village se sent « niché dans la forêt ».
-	for i in 130:
+	_reperer_les_points_importants()
+
+	# ── 1. Les bosquets de la couronne ────────────────────────────────────────
+	# Le village se sent « niché dans la forêt », et on ne voit plus le bord du
+	# sol. Les trous entre les bosquets font les clairières.
+	# L'anneau est centré sur l'Aelith (pas sur la place) : c'est sa paroi qui
+	# borne la forêt, à 56 m de son centre.
+	for i in 42:
 		var angle := _rng.randf_range(0.0, TAU)
-		var rayon := _rng.randf_range(27.0, 46.0)
-		var pos   := Vector3(sin(angle) * rayon, 0.0, cos(angle) * rayon)
-		if not _emplacement_libre(pos, 3.0):
-			continue
-		_planter(pos, _essence_au_hasard(), _rng.randf_range(0.75, 1.15))
+		var rayon := _rng.randf_range(30.0, 44.0)
+		var centre := AELITH_CENTRE + Vector3(sin(angle) * rayon, 0.0, cos(angle) * rayon)
+		var famille: String = ["chenaie", "chenaie", "boulaie", "pinede", "mixte"][_rng.randi() % 5]
+		_bosquet(centre, famille, _rng.randi_range(3, 6), 6.5)
 
-	# Derrière la palissade nord : c'est la forêt qui commence, la sortie de la
-	# zone. Sans ça, tout le fond de la carte derrière la porte est vide.
-	# Plus de conifères ici : la silhouette verticale ferme mieux l'horizon.
-	for i in 60:
-		var pos := Vector3(_rng.randf_range(-44.0, 44.0), 0.0, _rng.randf_range(-58.0, -42.0))
-		if not _emplacement_libre(pos, 2.0):
-			continue
-		var essence := "arbre_pin" if _rng.randf() < 0.55 else _essence_au_hasard()
-		_planter(pos, essence, _rng.randf_range(0.85, 1.3))
+	# Quelques arbres isolés entre les bosquets, pour que la couronne reste
+	# dense vue de loin.
+	for i in 140:
+		var angle := _rng.randf_range(0.0, TAU)
+		var rayon := _rng.randf_range(26.0, 47.0)
+		var pos := AELITH_CENTRE + Vector3(sin(angle) * rayon, 0.0, cos(angle) * rayon)
+		var famille: String = BOSQUETS.keys()[_rng.randi() % BOSQUETS.size()]
+		_planter_arbre(pos, _au_hasard(BOSQUETS[famille]), _rng.randf_range(0.8, 1.1))
 
-	# Quelques arbres isolés dans le village lui-même (ombre, verticalité).
-	for pos in [
-		Vector3( -9, 0,  18), Vector3( 13, 0,  -2), Vector3(-16, 0,   4),
-		Vector3( 11, 0,  16), Vector3(-10, 0, -18), Vector3( 16, 0,  26),
+	# ── 2. Derrière la palissade nord ─────────────────────────────────────────
+	# C'est la forêt qui commence, la sortie de la zone. Surtout des pins : la
+	# silhouette verticale ferme mieux l'horizon.
+	for i in 26:
+		var centre := Vector3(_rng.randf_range(-42.0, 42.0), 0.0, _rng.randf_range(-56.0, -42.0))
+		_bosquet(centre, "pinede" if _rng.randf() < 0.6 else "mixte", _rng.randi_range(3, 5), 5.0)
+
+	# ── 3. Les arbres du village ──────────────────────────────────────────────
+	# Ombre et verticalité sur la place. Les grands chênes sont gardés pour les
+	# endroits dégagés ; près des maisons, des arbres plus étroits.
+	for donnees in [
+		[Vector3( -9, 0,  18), "feuillu_large_2", 0.75],
+		[Vector3( 15, 0,   8), "feuillu_rond",    0.95],  # était à (13, -2) : devant l'oiseau
+		[Vector3(-16, 0,   4), "feuillu_dore",    0.85],  # le doré : l'Aelith en petit
+		[Vector3( 11, 0,  16), "feuillu_haut",    0.90],
+		[Vector3( 16, 0,  26), "feuillu_large_1", 0.85],
 	]:
-		_planter(pos, "arbre_chene" if _rng.randf() < 0.5 else "arbre_erable",
-				 _rng.randf_range(0.7, 0.95))
+		_planter_arbre(donnees[0], donnees[1], donnees[2], true)
 
-	# Des buissons en lisière et autour des maisons.
-	for i in 60:
-		var pos := _position_au_hasard(10.0, 40.0)
-		if pos == Vector3.INF:
-			continue
-		_planter(pos, "buisson", _rng.randf_range(0.7, 1.4))
+	# ── 4. Le saule, au bout du ruisseau ──────────────────────────────────────
+	# Hors de la zone du Puzzle 3 (il ne cache ni la roue ni les lianes).
+	_planter_arbre(Vector3(-42, 0, -24), "saule", 1.1, true)
+	# Et deux arbres dorés en lisière, qui répondent à la couleur de l'Aelith.
+	_planter_arbre(Vector3(-41, 0, -6), "feuillu_dore", 0.95, true)
+	_planter_arbre(Vector3(38, 0, -24), "feuillu_dore", 1.0, true)
 
-	_verser_les_multimesh()
+	# ── 5. Les lisières ───────────────────────────────────────────────────────
+	_border_les_maisons()
+	_border_les_palissades()
 
-func _essence_au_hasard() -> String:
-	var tirage := _rng.randf()
-	if tirage < 0.35:
-		return "arbre_chene"
-	if tirage < 0.65:
-		return "arbre_erable"
-	if tirage < 0.85:
-		return "arbre_bouleau"
-	return "arbre_pin"
+# Un bosquet : quelques arbres d'une même famille autour d'un centre, puis leur
+# sous-bois (fougères au pied, buissons sur le pourtour).
+func _bosquet(centre: Vector3, famille: String, nombre: int, etendue: float) -> void:
+	var plantes := 0
+	for i in nombre * 2:          # deux fois plus d'essais : certains sont refusés
+		if plantes >= nombre:
+			break
+		var angle := _rng.randf_range(0.0, TAU)
+		var dist := _rng.randf_range(0.0, etendue)
+		var pos := centre + Vector3(sin(angle) * dist, 0.0, cos(angle) * dist)
+		if _planter_arbre(pos, _au_hasard(BOSQUETS[famille]), _rng.randf_range(0.8, 1.15)):
+			plantes += 1
+	if plantes == 0:
+		return
 
-# Enregistre un arbre. Rien n'est affiché avant `_verser_les_multimesh()`.
-func _planter(pos: Vector3, essence: String, echelle: float) -> void:
+	# Sous-bois : les fougères au pied, à l'ombre.
+	for i in _rng.randi_range(3, 6):
+		var pos := centre + _decalage(etendue * 0.9)
+		_planter_petit(pos, _au_hasard(["fougere", "fougere_large", "fougere_basse"]),
+			_rng.randf_range(1.0, 1.6))
+	# Les buissons sur le pourtour, côté lumière.
+	for i in _rng.randi_range(1, 3):
+		var angle := _rng.randf_range(0.0, TAU)
+		var pos := centre + Vector3(sin(angle), 0.0, cos(angle)) * (etendue + 1.5)
+		_planter_petit(pos, _au_hasard(["buisson_1", "buisson_2", "buisson_baies"]),
+			_rng.randf_range(0.8, 1.3))
+	# Parfois du bois mort : une souche ou un tronc couché.
+	if _rng.randf() < 0.35:
+		_planter_petit(centre + _decalage(etendue), _au_hasard(["souche", "tronc_couche"]),
+			_rng.randf_range(1.0, 1.4))
+
+# Des buissons et des fougères contre les murs des maisons — sur les côtés et
+# derrière, jamais devant la porte (la terre battue du passage).
+func _border_les_maisons() -> void:
+	for maison in _maisons:
+		var taille: Vector3 = maison["taille"]
+		var centre: Vector3 = maison["pos"]
+		var rot: float = maison["rot"]
+		var demi_x := taille.x * 0.5 + 0.9
+		var demi_z := taille.z * 0.5 + 0.9
+		# Points du pourtour, dans le repère de la maison (z+ = la porte).
+		var points: Array = []
+		for t in [-0.8, -0.3, 0.3, 0.8]:
+			points.append(Vector3(t * demi_x, 0, -demi_z))      # derrière
+		for t in [-0.6, 0.0, 0.6]:
+			points.append(Vector3(-demi_x, 0, t * demi_z))      # côté gauche
+			points.append(Vector3( demi_x, 0, t * demi_z))      # côté droit
+		for local in points:
+			if _rng.randf() < 0.3:
+				continue                    # des trous : une haie trop régulière fait jardin à la française
+			var pos: Vector3 = centre + local.rotated(Vector3.UP, rot) + _decalage(0.4)
+			if not _lisiere_libre(pos):
+				continue
+			if _rng.randf() < 0.65:
+				_planter(pos, _au_hasard(["buisson_1", "buisson_2", "buisson_baies"]),
+					_rng.randf_range(0.7, 1.1))
+			else:
+				_planter(pos, _au_hasard(["fougere", "fougere_large"]), _rng.randf_range(1.0, 1.4))
+
+# Une lisière de buissons le long de la palissade nord et de la cour de la
+# grille, côté village (côté ouest, c'est le Puzzle 3 : on n'y touche pas). La végétation pousse là où on ne fauche pas.
+func _border_les_palissades() -> void:
+	var lignes := [
+		[Vector3( 10, 0, -34.6), Vector3( 44, 0, -34.6)],   # palissade nord, côté est
+		[Vector3( 8.9, 0, -27), Vector3( 8.9, 0, -35)],     # la cour de la grille, côté est
+	]
+	for ligne in lignes:
+		var a: Vector3 = ligne[0]
+		var b: Vector3 = ligne[1]
+		var nb := int(a.distance_to(b) / 2.2)
+		for i in nb:
+			var pos := a.lerp(b, (float(i) + _rng.randf_range(0.2, 0.8)) / float(nb))
+			if not _lisiere_libre(pos):
+				continue
+			var tirage := _rng.randf()
+			if tirage < 0.55:
+				_planter(pos, _au_hasard(["buisson_1", "buisson_2", "buisson_baies"]),
+					_rng.randf_range(0.8, 1.2))
+			elif tirage < 0.85:
+				_planter(pos, _au_hasard(["fougere", "fougere_large"]), _rng.randf_range(1.1, 1.5))
+			else:
+				_planter(pos, "fleurs_hautes", _rng.randf_range(1.2, 1.6))
+
+# Plante un arbre si la place est libre. Renvoie true s'il a été planté.
+# `force` : les arbres du village sont placés à la main, on ne vérifie que
+# l'écart avec les points importants.
+func _planter_arbre(pos: Vector3, nom: String, echelle: float, force: bool = false) -> bool:
+	var infos: Dictionary = VEGETATION[nom]
+	# L'encombrement au sol d'un arbre : un peu moins que le rayon de sa
+	# couronne. Deux couronnes peuvent se mêler, pas deux troncs se toucher.
+	var encombrement: float = float(infos["hauteur"]) * echelle * 0.16
+	if not force:
+		if not _emplacement_libre(pos, 2.5):
+			return false
+		for arbre in _arbres:
+			if Vector2(pos.x - arbre.x, pos.z - arbre.z).length() < encombrement + arbre.y:
+				return false
+	if _cache_un_point_important(pos, 4.0):
+		return false
+	# On range (x, encombrement, z) dans un Vector3 : pas besoin d'une classe.
+	_arbres.append(Vector3(pos.x, encombrement, pos.z))
+	_planter(pos, nom, echelle)
+	return true
+
+# Plante un petit élément (fougère, buisson, fleurs, rocher) si la place est libre.
+# `marge` : à agrandir pour les gros rochers, qui débordent largement de leur point.
+func _planter_petit(pos: Vector3, nom: String, echelle: float, ecrasement: float = 1.0,
+		marge: float = 0.6) -> void:
+	if not _emplacement_libre(pos, marge):
+		return
+	if _cache_un_point_important(pos, 1.4 + marge):
+		return
+	_planter(pos, nom, echelle, ecrasement)
+
+# Enregistre une plante. Rien n'est affiché avant `_verser_les_multimesh()`.
+# `ecrasement` < 1 aplatit le modèle (rochers) : une seule forme en donne deux.
+func _planter(pos: Vector3, nom: String, echelle: float, ecrasement: float = 1.0) -> void:
 	var t := Transform3D()
 	# Rotation au hasard autour de la verticale : c'est elle qui empêche de
 	# reconnaître le même modèle répété.
 	t = t.rotated(Vector3.UP, _rng.randf_range(0.0, TAU))
-	t = t.scaled(Vector3.ONE * echelle)
+	t = t.scaled(Vector3(echelle, echelle * ecrasement, echelle))
 	t.origin = pos
 
-	if not _plantations.has(essence):
-		_plantations[essence] = []
-	_plantations[essence].append(t)
+	if not _plantations.has(nom):
+		_plantations[nom] = []
+	_plantations[nom].append(t)
 
-	# La collision reste un cylindre par arbre — invisible, et beaucoup moins
-	# cher qu'une collision sur le maillage. Les buissons n'en ont pas : on
-	# doit pouvoir les traverser.
-	if ESSENCES.has(essence):
-		var infos: Dictionary = ESSENCES[essence]
+	# La collision reste un cylindre par tronc — invisible, et beaucoup moins
+	# cher qu'une collision sur le maillage. Les modèles recolorés ont le pied
+	# du tronc sur leur origine (tools/recolor_cc0.py) : le cylindre tombe pile
+	# dedans. Buissons, fleurs et rochers n'en ont pas : on les traverse.
+	var infos: Dictionary = VEGETATION.get(nom, {})
+	if float(infos.get("rayon_tronc", 0.0)) > 0.0:
 		var hauteur: float = float(infos["hauteur"]) * echelle
 		_collision_cylindre(
 			pos + Vector3(0, hauteur * 0.5, 0),
@@ -316,38 +507,74 @@ func _planter(pos: Vector3, essence: String, echelle: float) -> void:
 			hauteur
 		)
 
+# Verse les plantations dans des MultiMeshInstance3D.
+#
+# LES ARBRES : un seul MultiMesh par modèle, pour tout le village.
+#
+# LES PETITS ÉLÉMENTS (ceux qui ont une `portee`) : un MultiMesh par modèle ET
+# par case de 20 × 20 m. Pourquoi ? `visibility_range_end` se mesure depuis la
+# caméra jusqu'au CENTRE de la boîte englobante du noeud. Un MultiMesh qui
+# couvre tout le village a son centre au milieu de la place : la portée
+# n'aurait aucun sens (tout ou rien). En cases, seules celles proches de la
+# caméra sont dessinées — et le frustum culling écarte aussi celles de derrière.
 func _verser_les_multimesh() -> void:
-	for essence in _plantations:
-		var transformations: Array = _plantations[essence]
-		var modele := _maillage_du_modele(DOSSIER_MODELES + str(essence) + ".glb")
+	for nom in _plantations:
+		var infos: Dictionary = VEGETATION.get(nom, {})
+		var portee: float = float(infos.get("portee", 0.0))
+		var groupes: Dictionary = {}
+		for t: Transform3D in _plantations[nom]:
+			var cle := Vector2i.ZERO
+			if portee > 0.0:
+				cle = Vector2i(floori(t.origin.x / CASE_VEGETATION), floori(t.origin.z / CASE_VEGETATION))
+			if not groupes.has(cle):
+				groupes[cle] = []
+			groupes[cle].append(t)
+
+		var modele := _maillage_du_modele(_chemin_du_modele(str(nom)))
 		if modele.is_empty():
 			continue
+		for cle in groupes:
+			var transformations: Array = groupes[cle]
+			var mm := MultiMesh.new()
+			mm.transform_format = MultiMesh.TRANSFORM_3D
+			mm.mesh             = modele["maillage"]
+			mm.instance_count   = transformations.size()
+			# On recompose avec la transformation interne du modèle. Sans elle,
+			# tous les arbres sont couchés : Godot range le maillage d'un .glb
+			# sous un noeud qui porte la conversion d'axes Blender (Z haut) →
+			# Godot (Y haut), et un MultiMesh n'utilise que le maillage.
+			var correction: Transform3D = modele["transformation"]
+			for i in transformations.size():
+				mm.set_instance_transform(i, transformations[i] * correction)
 
-		var mm := MultiMesh.new()
-		mm.transform_format = MultiMesh.TRANSFORM_3D
-		mm.mesh             = modele["maillage"]
-		mm.instance_count   = transformations.size()
-		# On recompose avec la transformation interne du modèle. Sans elle,
-		# tous les arbres sont couchés : Godot range le maillage d'un .glb sous
-		# un noeud qui porte la conversion d'axes Blender (Z haut) → Godot
-		# (Y haut), et un MultiMesh n'utilise que le maillage, pas le noeud.
-		var correction: Transform3D = modele["transformation"]
-		for i in transformations.size():
-			mm.set_instance_transform(i, transformations[i] * correction)
+			var noeud := MultiMeshInstance3D.new()
+			noeud.name      = "Vegetation_%s_%d_%d" % [nom, cle.x, cle.y]
+			noeud.multimesh = mm
+			if portee > 0.0:
+				# La portée vise le centre de la case : on ajoute sa demi-diagonale
+				# pour qu'un élément au bord ne disparaisse pas trop tôt.
+				noeud.visibility_range_end = portee + CASE_VEGETATION * 0.7
+			if not bool(infos.get("ombre", true)):
+				noeud.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			add_child(noeud)
 
-		var noeud := MultiMeshInstance3D.new()
-		noeud.name      = "Foret_" + str(essence)
-		noeud.multimesh = mm
-		add_child(noeud)
+# Où trouver un modèle : la végétation CC0 d'abord, sinon les anciens modèles
+# générés par tools/gen_arbres.py (arbre_chene, buisson…).
+func _chemin_du_modele(nom: String) -> String:
+	var chemin := DOSSIER_VEGETATION + nom + ".glb"
+	if ResourceLoader.exists(chemin):
+		return chemin
+	return DOSSIER_MODELES + nom + ".glb"
 
 # Sort d'un .glb son maillage ET la transformation qui va avec.
 # Les modèles sont fusionnés en un seul objet à l'export (voir `exporter()`
-# dans tools/blender_commun.py), il n'y a donc qu'un MeshInstance3D à trouver.
+# dans tools/blender_commun.py et `traiter()` dans tools/recolor_cc0.py), il
+# n'y a donc qu'un MeshInstance3D à trouver.
 # Renvoie { "maillage": Mesh, "transformation": Transform3D }, ou {} si raté.
 func _maillage_du_modele(chemin: String) -> Dictionary:
 	var scene: PackedScene = load(chemin)
 	if scene == null:
-		push_warning("Modèle introuvable : " + chemin + " — lance tools/gen_arbres.py")
+		push_warning("Modèle introuvable : " + chemin + " — lance tools/recolor_cc0.py")
 		return {}
 
 	var racine := scene.instantiate()
@@ -374,61 +601,130 @@ func _tous_les_enfants(racine: Node) -> Array:
 		liste.append_array(_tous_les_enfants(enfant))
 	return liste
 
+func _au_hasard(liste: Array) -> String:
+	return str(liste[_rng.randi() % liste.size()])
+
+# Un petit décalage horizontal au hasard, dans un disque de rayon `rayon`.
+func _decalage(rayon: float) -> Vector3:
+	var angle := _rng.randf_range(0.0, TAU)
+	var r := sqrt(_rng.randf()) * rayon   # sqrt : répartition uniforme dans le disque
+	return Vector3(sin(angle) * r, 0.0, cos(angle) * r)
+
 # ──────────────────────────────────────────────────────────────────────────────
-# HERBE, FLEURS, ROCHERS
+# CE QUE LA VÉGÉTATION NE DOIT PAS CACHER
 # ──────────────────────────────────────────────────────────────────────────────
+#
+# Un arbre planté devant l'oiseau, un buisson sur un levier : le joueur cherche
+# une pièce de puzzle qu'il ne peut pas voir. On relève donc, dans la scène de
+# la zone (le parent du décor), la position de chaque PNJ et de chaque zone
+# d'interaction ou pièce mobile des puzzles. Rien ne pousse près d'eux.
+#
+# L'oiseau est perché sur un toit : on garde en plus des « couloirs de vue »
+# dégagés entre lui et les endroits d'où les joueurs le cherchent.
+
+const COULOIRS_DE_VUE := [
+	# [depuis, vers] — au sol, en x/z
+	[Vector3(4, 0, 3.5),  Vector3(22, 0, -3.2)],   # Vaenmor (la place) → l'oiseau
+	[Vector3(6, 0, -14),  Vector3(22, 0, -3.2)],   # la plateforme → l'oiseau
+	[Vector3(0, 0, 10),   Vector3(22, 0, -3.2)],   # la rue principale → l'oiseau
+	[Vector3(-2, 0, -6),  Vector3(-16, 0, -28)],   # la place → les lianes et la roue
+]
+
+func _reperer_les_points_importants() -> void:
+	_points_importants.clear()
+	# Le décor est enfant de la zone (zone1.gd). Hors de la zone (outil de
+	# mesure), il n'y a rien à protéger.
+	var zone := get_parent() as Node3D
+	if zone == null:
+		return
+	for nom in ["PNJ", "Puzzle1PorteDouble", "Puzzle2Oiseau", "Puzzle3RoueEau",
+			"ZoneGrimoire", "ZoneStele"]:
+		var noeud := zone.get_node_or_null(nom)
+		if noeud == null:
+			continue
+		# Chaque noeud 3D du groupe (le PNJ, une zone d'interaction, la grille…)
+		# sauf les formes de collision et les maillages, qui sont à la même
+		# place que leur parent. Les positions sont ramenées dans le repère
+		# de la zone, au sol.
+		for enfant in _tous_les_enfants(noeud):
+			if enfant is Node3D and not (enfant is CollisionShape3D or enfant is MeshInstance3D):
+				var local: Vector3 = zone.to_local(enfant.global_position)
+				_points_importants.append(Vector3(local.x, 0.0, local.z))
+
+# true si `pos` est à moins de `rayon` d'un PNJ ou d'une pièce de puzzle, ou
+# dans un couloir de vue de l'oiseau.
+func _cache_un_point_important(pos: Vector3, rayon: float) -> bool:
+	var sol := Vector3(pos.x, 0.0, pos.z)
+	for point in _points_importants:
+		if sol.distance_to(point) < rayon:
+			return true
+	for couloir in COULOIRS_DE_VUE:
+		var proche := Geometry3D.get_closest_point_to_segment(sol, couloir[0], couloir[1])
+		if sol.distance_to(proche) < rayon:
+			return true
+	return false
+
+# Une lisière (contre un mur, une clôture) n'a pas à respecter la marge des
+# maisons de `_emplacement_libre()` — c'est tout son intérêt. On vérifie le
+# reste : le chemin, les puzzles, la cavité, les PNJ.
+func _lisiere_libre(pos: Vector3) -> bool:
+	if pos.distance_to(AELITH_CENTRE) > 48.0:
+		return false
+	if abs(pos.x) < 3.6 or _sur_un_chemin(pos, 1.5):          # les chemins
+		return false
+	if pos.x > -40.0 and pos.x < -8.0 and pos.z > -42.0 and pos.z < -14.0:   # Puzzle 3
+		return false
+	if abs(pos.x) < 8.0 and pos.z < -22.0:                    # grille, porte, stèle
+		return false
+	return not _cache_un_point_important(pos, 2.2)
+
+# ──────────────────────────────────────────────────────────────────────────────
+# FLEURS ET ROCHERS
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# L'herbe au sol n'est plus ici : elle est dessinée par un shader dédié
+# (scripts/zones/herbe.gd). Les anciennes touffes en lamelles (420 petits
+# objets, 420 ordres de dessin) sont retirées.
 
 func _semer_herbe_et_fleurs() -> void:
-	for i in 140:
-		var pos := _position_au_hasard(6.0, 34.0)
-		if pos == Vector3.INF:
+	# Des touffes de fleurs : 4 à 9 fleurs d'une même sorte, serrées. Une
+	# prairie de BotW, ce sont des taches de couleur, pas des points isolés.
+	for i in 34:
+		var centre := _position_au_hasard(7.0, 40.0)
+		if centre == Vector3.INF:
 			continue
-		# Une touffe = 3 lamelles fines, tournées au hasard.
-		for j in 3:
-			var brin := BoxMesh.new()
-			brin.size = Vector3(0.08, _rng.randf_range(0.30, 0.60), 0.08)
-			_prop(
-				brin,
-				pos + Vector3(_rng.randf_range(-0.2, 0.2), 0.2, _rng.randf_range(-0.2, 0.2)),
-				C_HERBE.lerp(C_FEUILLE_2, _rng.randf()),
-				_rng.randf_range(0.0, TAU)
-			)
+		var sorte := "fleurs_touffe" if _rng.randf() < 0.65 else "fleurs_hautes"
+		var nb := _rng.randi_range(4, 9) if sorte == "fleurs_touffe" else _rng.randi_range(2, 4)
+		for j in nb:
+			_planter_petit(centre + _decalage(1.3), sorte, _rng.randf_range(1.1, 1.6))
+		# Une fougère ou deux au bord de la touffe, de temps en temps.
+		if _rng.randf() < 0.4:
+			_planter_petit(centre + _decalage(2.0), "fougere_basse", _rng.randf_range(1.0, 1.4))
 
-	for i in 70:
-		var pos := _position_au_hasard(7.0, 30.0)
-		if pos == Vector3.INF:
-			continue
-		var tige := BoxMesh.new()
-		tige.size = Vector3(0.05, 0.35, 0.05)
-		_prop(tige, pos + Vector3(0, 0.17, 0), C_HERBE)
-
-		var petale := SphereMesh.new()
-		petale.radius          = 0.09
-		petale.height          = 0.14
-		petale.radial_segments = 6
-		petale.rings           = 3
-		_prop(petale, pos + Vector3(0, 0.38, 0), C_FLEUR[_rng.randi() % C_FLEUR.size()])
 
 func _poser_les_rochers() -> void:
-	for i in 26:
-		var pos := _position_au_hasard(9.0, 36.0)
-		if pos == Vector3.INF:
+	# Des groupes : un gros rocher moussu, deux ou trois petits autour. Ils
+	# donnent au village un relief que le sol plat n'a pas.
+	for i in 16:
+		var centre := _position_au_hasard(14.0, 44.0)
+		if centre == Vector3.INF:
 			continue
-		var taille := _rng.randf_range(0.4, 1.3)
+		_planter_petit(centre, _au_hasard(["rocher_moussu_4", "rocher_moussu_5", "rocher_2"]),
+			_rng.randf_range(1.6, 2.6), _rng.randf_range(0.7, 1.0), 2.5)
+		for j in _rng.randi_range(1, 3):
+			_planter_petit(centre + _decalage(2.2),
+				_au_hasard(["rocher_moussu_1", "rocher_moussu_2", "rocher_moussu_3", "rocher_1"]),
+				_rng.randf_range(0.9, 1.6), _rng.randf_range(0.6, 1.0))
+		if _rng.randf() < 0.5:
+			_planter_petit(centre + _decalage(2.5), "fougere", _rng.randf_range(1.0, 1.3))
 
-		var roche := SphereMesh.new()
-		roche.radius          = taille
-		roche.height          = taille * 1.3
-		roche.radial_segments = 6
-		roche.rings           = 3
-		# Aplatie et tournée : une sphère écrasée lit très bien comme un rocher.
-		var mi := _prop(
-			roche,
-			pos + Vector3(0, taille * 0.25, 0),
-			C_PIERRE_2.lerp(C_PIERRE, _rng.randf()),
-			_rng.randf_range(0.0, TAU)
-		)
-		mi.scale = Vector3(1.0, 0.55, _rng.randf_range(0.7, 1.1))
+	# Au pied du rempart, de gros blocs tombés de la paroi.
+	for i in 10:
+		var angle := _rng.randf_range(0.0, TAU)
+		var pos := AELITH_CENTRE + Vector3(sin(angle), 0.0, cos(angle)) * _rng.randf_range(45.0, 47.5)
+		_planter_petit(pos, _au_hasard(["rocher_2", "rocher_moussu_4", "rocher_moussu_5"]),
+			_rng.randf_range(2.4, 3.6), _rng.randf_range(0.7, 1.0), 3.0)
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # LE PUITS
@@ -792,8 +1088,8 @@ func _emplacement_libre(pos: Vector3, marge: float) -> bool:
 	# Le pied de l'Aelith
 	if Vector2(pos.x, pos.z).length() < 8.0:
 		return false
-	# La rue principale nord-sud
-	if abs(pos.x) < 3.0 + marge:
+	# La rue principale nord-sud, et les deux chemins de traverse
+	if abs(pos.x) < 3.0 + marge or _sur_un_chemin(pos, 1.0 + marge):
 		return false
 	# Tout le Puzzle 3 — le ruisseau, la roue à eau, les lianes et la lanterne.
 	# Large exprès : un arbre planté devant cacherait une pièce du puzzle.
@@ -813,3 +1109,17 @@ func _emplacement_libre(pos: Vector3, marge: float) -> bool:
 		if Vector2(pos.x - centre.x, pos.z - centre.z).length() < demi:
 			return false
 	return true
+
+# Les deux chemins de traverse dallés (voir `_tracer_les_chemins()`).
+const CHEMINS := [
+	[Vector3( 4, 0,  2), Vector3( 18, 0,  12)],   # vers chez Lira
+	[Vector3(-4, 0, -2), Vector3(-19, 0, -11)],   # vers le moulin
+]
+
+func _sur_un_chemin(pos: Vector3, marge: float) -> bool:
+	var sol := Vector3(pos.x, 0.0, pos.z)
+	for chemin in CHEMINS:
+		var proche := Geometry3D.get_closest_point_to_segment(sol, chemin[0], chemin[1])
+		if sol.distance_to(proche) < marge:
+			return true
+	return false

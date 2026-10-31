@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://tools/mesure_decor.gd" id="1_m"]
+
+[node name="MesureDecor" type="Node"]
+script = ExtResource("1_m")

@@ -25,8 +25,10 @@
 # importe ses fonctions et on change seulement la taille et les vêtements.
 #
 # ORIENTATION : comme les héros, les PNJ regardent -Y dans Blender = +Z dans
-# Godot (le sud, l'entrée du village). L'origine est AUX PIEDS : la
-# respiration procédurale (scale Y) reste ainsi ancrée au sol.
+# Godot (le sud, l'entrée du village). L'origine est AUX PIEDS.
+#
+# ANIMATION : un squelette et une animation `idle` sont ajoutés par
+# tools/animer_personnages.py (fonction `animer_pnj`), appelé ci-dessous.
 #
 # Usage :
 #   blender --background --python tools/gen_pnj.py
@@ -41,7 +43,7 @@ import sys
 from mathutils import Matrix, Vector
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from blender_commun import boite, boule, cylindre, branche, vider_la_scene, exporter
+from blender_commun import boite, boule, cylindre, branche
 import gen_personnages as gp
 
 SOUS_DOSSIER = "personnages"
@@ -194,13 +196,21 @@ def enfant():
 # ──────────────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-	for nom_fichier, graine, fabrique in [
-		("pnj_ancien.glb", 31, ancien),
-		("pnj_villageois.glb", 32, villageois),
-		("pnj_villageoise.glb", 33, villageoise),
-		("pnj_enfant.glb", 34, enfant),
+	# Chaque PNJ reçoit le même squelette que Kael et Mira, et une seule
+	# animation : `idle` (respiration, poids qui bascule, regard qui erre).
+	# Voir tools/animer_personnages.py.
+	import animer_personnages as ap
+	for nom_fichier, graine, fabrique, carrure, voute in [
+		("pnj_ancien.glb", 31, ancien, 1.0, True),
+		("pnj_villageois.glb", 32, villageois, 1.18, False),
+		("pnj_villageoise.glb", 33, villageoise, 0.95, False),
+		("pnj_enfant.glb", 34, enfant, 0.78, False),
 	]:
-		vider_la_scene()
+		ap.preparer_la_scene()
 		random.seed(graine)
 		fabrique()
-		exporter(SOUS_DOSSIER, nom_fichier, lisse=False)
+		# L'ancien est voûté : ses os doivent suivre le dos courbé du modèle
+		# (même angle et même pivot que dans ancien()).
+		inclinaison = (math.radians(20), h(gp.Y_BASSIN)) if voute else None
+		arm, maillage = ap.animer_pnj(carrure, inclinaison)
+		ap.exporter_anime(nom_fichier, arm, maillage)

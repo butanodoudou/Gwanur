@@ -34,6 +34,7 @@ func _verifier_skills() -> void:
 
 # Brassards de Sève — les puzzles écoutent ce signal pour faire pousser des lianes
 func utiliser_brassards() -> void:
+	jouer_geste("skill1")  # il lève les deux bras (visuel seulement)
 	lianes_invoquees.emit(global_position)
 
 # Corne d'Appel — les créatures écoutent ce signal (sans argument).
@@ -41,4 +42,5 @@ func utiliser_brassards() -> void:
 # le groupe "kael" et mesure la distance elle-même. La portée de l'oiseau est
 # PORTEE_CORNE dans puzzle_oiseau.gd.
 func utiliser_corne() -> void:
+	jouer_geste("skill2")  # il porte la corne à ses lèvres (visuel seulement)
 	corne_sonnee.emit()

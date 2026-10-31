@@ -38,11 +38,13 @@ func _verifier_skills() -> void:
 # Grappin de Cuivre — accroche ou décroche
 # Les zones de grappin (GrappinPoint) écoutent ce signal pour réagir
 func utiliser_grappin() -> void:
+	jouer_geste("skill1")  # elle arme et lance le bras (visuel seulement)
 	grappin_en_cours = not grappin_en_cours
 	grappin_active.emit(grappin_en_cours)
 
 # Lanterne à Mémoire — allume ou éteint
 # Les nœuds d'écho dans la scène écoutent ce signal pour devenir visibles
 func basculer_lanterne() -> void:
+	jouer_geste("skill2")  # elle touche sa lanterne (visuel seulement)
 	lanterne_allumee = not lanterne_allumee
 	lanterne_activee.emit(lanterne_allumee)
