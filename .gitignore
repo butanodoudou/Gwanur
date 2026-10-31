@@ -39,3 +39,7 @@ tools/captures/
 
 # Cache Python des scripts Blender
 tools/__pycache__/
+
+# Sources brutes des packs CC0 (.fbx d'origine) — on ne versionne que les .glb
+# recolorés. Pour les retrouver : assets/models/vegetation/LICENCES.md
+tools/sources_cc0/
