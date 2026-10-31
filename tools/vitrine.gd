@@ -6,7 +6,8 @@
 #   godot --path . res://tools/vitrine.tscn --resolution 1400x720 -- arbre_chene arbre_pin
 #
 # Tout ce qui suit le `--` est une liste de noms de modèles (sans .glb). Ils
-# sont cherchés dans assets/models/environnement/ puis personnages/.
+# sont cherchés dans assets/models/environnement/, personnages/ puis
+# vegetation/quaternius/.
 # Sortie : tools/captures/vitrine.png
 #
 # ⚠ Après avoir regénéré un .glb, il FAUT réimporter avant de capturer :
@@ -18,6 +19,7 @@ const SORTIE := "res://tools/captures/"
 const DOSSIERS := [
 	"res://assets/models/environnement/",
 	"res://assets/models/personnages/",
+	"res://assets/models/vegetation/quaternius/",
 ]
 
 func _ready() -> void:
