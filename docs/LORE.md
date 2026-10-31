@@ -109,6 +109,7 @@ Avec Aldric, elle a porté la paix entre Arathos et la Grande Sylve. Ils ont ét
 Sans Tisserande pour maintenir les Terres Grises, la frontière entre les deux peuples se referme lentement, effaçant tout ce qui existe entre les deux mondes — y compris des êtres comme Kael et Mira. Elle est partie réparer ce qu'elle avait abandonné. Sans un mot, pour les protéger.
 
 **La fleur sur le lit** — c'est son sceau, son vrai nom en langage vaelindrien ancien.
+Voir « La fleur sans nom » (Zone 1) : la même fleur pousse de l'autre côté du pont du moulin.
 
 ---
 
@@ -242,6 +243,44 @@ là, au centre, dans la lumière.
 Aelindra venait souvent s'asseoir sous le Rejet. La nuit de son départ, c'est
 là qu'elle a laissé à Vaenmor la lettre d'Aldric.
 
+### La fleur sans nom 🎮
+
+Celle de l'oreiller. Six pétales d'un blanc de lune, à peine lilas, un cœur
+bleu pâle, une hampe haute et des feuilles longues comme celles des lys. Elle
+garde un peu de lumière, même en plein jour.
+
+**Son nom.** Le jeu ne la nomme jamais : *« Ni Kael ni Mira n'en connaissent le
+nom »*, et personne à Sylvara ne le leur dira. Dans les Lisières, la fleur
+d'une Tisserande porte le même mot que son vrai nom en vaelindrien ancien —
+celui auquel elle a renoncé en prenant la charge. Dire le nom de la fleur, ce
+serait dire le sien. C'est pour ça que les anciens se taisent. Le mot reste
+réservé à la Zone 5, quand Aelindra leur dira tout ; il n'est pas fixé ici, exprès.
+
+**Ce qu'elle est (jamais dit dans le jeu).** Elle pousse là où une Tisserande
+s'est arrêtée assez longtemps pour que la terre s'en souvienne. Elle ne fane
+pas tant que celle qui l'a fait naître est en vie. Kael le sent sans le savoir ;
+la fin lui fait dire « c'est un signe ».
+
+**Où.** De l'autre côté du pont du Puzzle 3, dans le **bief** — la bande de
+terre fermée entre le ruisseau et la palissade nord. La nuit de son départ,
+avant que la liane ne s'en aille avec elle, le pont du moulin tenait encore :
+Aelindra a traversé et s'est assise au bord de l'eau, près de la roue. Une
+touffe de la même fleur au bout du pont et des pétales tombés, en file, mènent
+jusqu'à elle.
+
+**Ce qui se passe.** Quand les jumeaux la trouvent (optionnel — elle n'ouvre
+rien), chacun réagit à sa façon :
+- **Kael** s'agenouille ; sous ses Brassards, la sève de la tige bat. *« Elle
+  s'est assise ici, cette nuit. La terre s'en souvient encore. »*
+- **Mira** regarde l'herbe couchée, déduit. *« Le pont tenait encore quand elle
+  est venue. Elle a choisi cet endroit. »*
+- Quand les deux l'ont vue : *Ni l'un ni l'autre ne la cueille. On ne cueille
+  pas ce qu'on vous a laissé.*
+
+S'ils l'ont trouvée, la fin gagne deux lignes (`FIN_FLEUR`) : la fleur ne s'est
+pas fanée ; Kael dit que c'est un signe, Mira hausse les épaules — mais c'est
+elle qui y retourne.
+
 ### La chronologie de la journée
 
 Le jeu se déroule **en une seule journée**, celle qui suit le départ.
@@ -253,7 +292,7 @@ Le jeu se déroule **en une seule journée**, celle qui suit le départ.
 | Il y a 2 ans | Aldric meurt d'une fièvre. |
 | L'hiver dernier | La Porte Double du nord se ferme. Plus personne ne la passe : on dit que la brume mange les chemins. |
 | La semaine dernière | Les feuilles de l'oculus changent de couleur. |
-| Cette nuit | Aelindra s'assoit une dernière fois sous le Rejet, confie la lettre à Vaenmor, et part. La liane du moulin disparaît avec elle ; la roue s'arrête. |
+| Cette nuit | Aelindra traverse le pont du moulin et s'assoit au bord du bief, où la fleur pousse derrière elle. Puis elle s'assoit une dernière fois sous le Rejet, confie la lettre à Vaenmor, et part. La liane du moulin disparaît avec elle ; la roue s'arrête. |
 | Ce matin (Acte 0) | Kael trouve le lit vide et la fleur. Mira arrive. Le jeu commence. |
 
 ### Structure Narrative 🎮
@@ -277,6 +316,8 @@ donnent la clé d'un puzzle : Caeryn (la porte), Lira (l'oiseau), Brennan (la ro
    corne de Kael ; son poids lève la grille, Mira court bloquer le verrou.
 3. **La Roue d'Eau** — la Lanterne de Mira fait réapparaître la liane disparue,
    les Brassards de Kael la font repousser. Le moulin repart. Le village se remet à respirer.
+   Le pont se pose sur le ruisseau ; de l'autre côté, pour qui traverse, la fleur
+   sans nom (optionnelle, voir plus haut).
 
 Dans chacun, l'un tient pendant que l'autre agit. Kael (attendre, sentir) et
 Mira (courir, agir) ont *tous les deux* raison — mais jamais seuls.

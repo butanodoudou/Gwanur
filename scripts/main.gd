@@ -103,6 +103,10 @@ func _jouer_fin() -> void:
 	if GameManager.choix_grimoire == "partager":
 		fin = TextesNarration.FIN_PARTAGE
 	await ecran_narration.afficher_lignes(fin)
+	# La fleur du bief est optionnelle : ses lignes n'apparaissent que si les
+	# jumeaux l'ont trouvée (voir scripts/zones/fleur_bief.gd).
+	if GameManager.fleur_trouvee:
+		await ecran_narration.afficher_lignes(TextesNarration.FIN_FLEUR)
 	await ecran_narration.afficher_lignes(TextesNarration.FIN_COMMUNE)
 	await ecran_narration.defiler_credits(TextesNarration.CREDITS)
 

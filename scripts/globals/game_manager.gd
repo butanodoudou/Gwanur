@@ -29,6 +29,12 @@ var puzzle1_resolu: bool = false
 var puzzle2_resolu: bool = false
 var puzzle3_resolu: bool = false
 
+# La fleur sans nom, dans le bief (scripts/zones/fleur_bief.gd). Optionnelle :
+# elle n'ouvre rien, elle ajoute seulement deux lignes à la fin (main.gd).
+var fleur_trouvee: bool = false     # au moins un des jumeaux l'a regardée
+var fleur_vue_kael: bool = false
+var fleur_vue_mira: bool = false
+
 # ── Choix narratifs ────────────────────────────────────────────────────────
 # Zone 1 : "secret" = on garde le grimoire / "partager" = on le montre aux villageois
 var choix_grimoire: String = ""
@@ -75,6 +81,9 @@ func reinitialiser() -> void:
 	puzzle1_resolu = false
 	puzzle2_resolu = false
 	puzzle3_resolu = false
+	fleur_trouvee = false
+	fleur_vue_kael = false
+	fleur_vue_mira = false
 	choix_grimoire = ""
 	moralite_kael = 0
 	moralite_mira = 0

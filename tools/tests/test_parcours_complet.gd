@@ -9,9 +9,14 @@
 #                          réinitialise, appui simultané, puis ouverture
 #   4. Puzzle 2          — oiseau : Mira trop lente → reset, puis réussite
 #   5. Puzzle 3          — roue d'eau : Kael seul / lanterne éteinte échouent,
-#                          puis lanterne + lianes → résolu
+#                          puis lanterne + lianes → résolu. AVANT : le bief
+#                          (au-delà du ruisseau) est fermé (contrôle négatif)
+#   5b. Fleur du bief    — traverser le pont, Kael puis Mira regardent la
+#                          fleur : réactions différentes, ligne commune,
+#                          GameManager.fleur_trouvee ; jamais un prérequis
 #   6. Grimoire          — apparaît, se lit jusqu'au bout, choix, GameManager,
-#                          puis écran de fin → crédits → retour au menu
+#                          puis écran de fin (avec les lignes de la fleur)
+#                          → crédits → retour au menu
 #   7. Nouvelle partie   — « Commencer » au menu : GameManager, dialogues et
 #                          InteractionManager repartent de zéro
 #
@@ -93,6 +98,7 @@ func _ready() -> void:
 	await _etape_puzzle1()
 	await _etape_puzzle2()
 	await _etape_puzzle3()
+	await _etape_fleur()
 	await _etape_grimoire()
 	await _etape_nouvelle_partie()
 	_conclure()
@@ -462,6 +468,10 @@ func _etape_puzzle3() -> void:
 	var zone_lianes: Area3D = _p3.get_node("ZoneLianes")
 	var echo: Node3D = _p3.get_node("EchoLiane")
 
+	# Contrôle négatif : avant le pont, le bief (et sa fleur) est hors d'atteinte.
+	var passages := _passages_vers_le_bief()
+	_verifier("NEGATIF : avant le pont, aucun passage vers le bief", str(passages), "[]")
+
 	# Kael seul, Mira loin
 	await _eloigner(_mira)
 	await _placer_dans(_kael, zone_lianes)
@@ -508,6 +518,84 @@ func _etape_puzzle3() -> void:
 	_verifier("Apres resolution, la lanterne ne fait plus reapparaitre l'echo",
 		str(echo.visible or _lignes_vues.slice(vues_avant).any(func(l): return l.contains("fantôme"))), "false")
 	await _skill("joueur2_skill2")   # éteint
+	await _eloigner(_mira)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 5b. LA FLEUR DU BIEF (optionnelle)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# Les traversées possibles vers le bief (x ∈ [-30.7, -12.8], z ∈ [-36, -32]),
+# en coordonnées de la zone, à hauteur de poitrine : par le pont, par le
+# ruisseau plus à l'est, par l'ouest, par l'est et par le nord. Renvoie les
+# noms de celles qui ne rencontrent AUCUNE collision.
+func _passages_vers_le_bief() -> Array:
+	var libres: Array = []
+	var cible := Vector3(-21.0, 1.0, -34.0)
+	for passage in [
+		["pont", Vector3(-28.0, 1.0, -26.0), Vector3(-28.0, 1.0, -34.0)],
+		["ruisseau", Vector3(-16.0, 1.0, -26.0), Vector3(-16.0, 1.0, -34.0)],
+		["ouest", Vector3(-36.0, 1.0, -34.0), cible],
+		["est", Vector3(-10.0, 1.0, -34.0), cible],
+		["nord", Vector3(-21.0, 1.0, -42.0), cible],
+	]:
+		if _rayon_libre(passage[1], passage[2]):
+			libres.append(passage[0])
+	return libres
+
+func _etape_fleur() -> void:
+	print("--- 5b. La fleur du bief (optionnelle) ---")
+	var fleur: Node3D = _zone.get_node_or_null("FleurBief")
+	if fleur == null:
+		_verifier("Noeud present : Monde/Zone1/FleurBief", "absent", "present")
+		return
+	var zone_fleur: Area3D = fleur.get_node("ZoneFleur")
+
+	# Le pont se pose à la fin de son animation : le gué s'ouvre.
+	var pose := await _attendre_que(func(): return _zone._gue_ferme == null, 6.0)
+	_verifier("Le pont est pose", str(pose), "true")
+	_verifier("Apres le pont, on ne passe vers le bief QUE par le pont",
+		str(_passages_vers_le_bief()), str(["pont"]))
+
+	# La fleur n'est jamais un prérequis : le grimoire s'annonce sans elle.
+	var annonce := await _attendre_que(func(): return _lignes_vues.has(_zone.INDICE_GRIMOIRE[0]), 15.0, true)
+	await _fermer_dialogues()
+	_verifier("Le grimoire s'annonce sans que la fleur ait ete vue",
+		str(annonce and _zone.get_node("ZoneGrimoire").monitoring and not GameManager.fleur_trouvee), "true")
+
+	# ── Kael la regarde le premier ───────────────────────────────────────────
+	var accessible := await _placer_dans(_kael, zone_fleur)
+	_verifier("La fleur est accessible a pied (de l'autre cote du pont)", str(accessible), "true")
+	_verifier("Prompt de Kael pres de la fleur", str(_prompt(_hud_kael).contains("fleur")), "true")
+	await _appuyer("joueur1_interagir")
+	await _attendre_que(func(): return DialogueManager.est_actif(), 1.0)
+	_verifier("Kael : sa propre reaction (fleur_bief.LIGNES_KAEL)",
+		DialogueManager._label_texte.text, fleur.LIGNES_KAEL[0])
+	_verifier("GameManager.fleur_trouvee apres Kael", str(GameManager.fleur_trouvee), "true")
+	_verifier("Vue par Kael, pas encore par Mira",
+		str([GameManager.fleur_vue_kael, GameManager.fleur_vue_mira]), str([true, false]))
+	await _fermer_dialogues()
+	_verifier("Kael seul : pas encore de ligne commune",
+		str(_lignes_vues.has(fleur.LIGNES_COMMUNES[0])), "false")
+
+	# ── Puis Mira ────────────────────────────────────────────────────────────
+	accessible = await _placer_dans(_mira, zone_fleur)
+	_verifier("Mira atteint la fleur aussi", str(accessible), "true")
+	await _appuyer("joueur2_interagir")
+	await _attendre_que(func(): return DialogueManager.est_actif(), 1.0)
+	_verifier("Mira : une reaction DIFFERENTE de celle de Kael (LIGNES_MIRA)",
+		DialogueManager._label_texte.text, fleur.LIGNES_MIRA[0])
+	await _fermer_dialogues("joueur2_interagir")
+	_verifier("Les deux l'ont vue : la ligne commune est passee",
+		str(_lignes_vues.has(fleur.LIGNES_COMMUNES[0])), "true")
+	_verifier("Vue par les deux", str([GameManager.fleur_vue_kael, GameManager.fleur_vue_mira]), str([true, true]))
+
+	# ── La regarder une seconde fois ─────────────────────────────────────────
+	await _appuyer("joueur1_interagir")
+	await _attendre_que(func(): return DialogueManager.est_actif(), 1.0)
+	_verifier("Une seconde fois : une ligne breve, sans rejouer la scene",
+		DialogueManager._label_texte.text, fleur.LIGNES_REVUE[0])
+	await _fermer_dialogues()
+	await _eloigner(_kael)
 	await _eloigner(_mira)
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -621,6 +709,13 @@ func _etape_grimoire() -> void:
 	var fin_choix: Array[String] = TextesNarration.FIN_SECRET if _choix_voulu == "secret" else TextesNarration.FIN_PARTAGE
 	_verifier("Texte de fin du choix '%s'" % _choix_voulu, str(textes_fin.has(fin_choix[0])), "true")
 	_verifier("Puis le texte commun", str(textes_fin.has(TextesNarration.FIN_COMMUNE[0])), "true")
+	# La fleur a été vue (étape 5b) : ses lignes passent ENTRE la fin du choix
+	# et la fin commune.
+	var i_choix := textes_fin.find(fin_choix[0])
+	var i_fleur := textes_fin.find(TextesNarration.FIN_FLEUR[0])
+	var i_commune := textes_fin.find(TextesNarration.FIN_COMMUNE[0])
+	_verifier("Fleur trouvee : FIN_FLEUR s'affiche entre la fin du choix et la fin commune",
+		str(i_fleur > i_choix and i_fleur < i_commune and i_choix >= 0), "true")
 	var menu = get_tree().current_scene
 	_verifier("La fin ramene au menu principal",
 		menu.scene_file_path if menu != null else "(aucune scene)", SCENE_MENU)
@@ -651,8 +746,9 @@ func _etape_nouvelle_partie() -> void:
 	_verifier("Commencer relance main.tscn", str(relancee), "true")
 	_verifier("Une nouvelle partie repart avec un GameManager vierge",
 		str([GameManager.puzzle1_resolu, GameManager.puzzle2_resolu, GameManager.puzzle3_resolu,
-			GameManager.choix_grimoire, GameManager.moralite_kael, GameManager.moralite_mira]),
-		str([false, false, false, "", 0, 0]))
+			GameManager.choix_grimoire, GameManager.moralite_kael, GameManager.moralite_mira,
+			GameManager.fleur_trouvee, GameManager.fleur_vue_kael, GameManager.fleur_vue_mira]),
+		str([false, false, false, "", 0, 0, false, false, false]))
 	_verifier("Aucun dialogue ne survit au changement de scene", str(DialogueManager.est_actif()), "false")
 	_verifier("InteractionManager a oublie les cibles de l'ancienne partie",
 		str(InteractionManager._cibles[1].has(fantome)), "false")

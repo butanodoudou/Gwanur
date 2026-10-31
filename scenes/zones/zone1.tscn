@@ -1,4 +1,4 @@
-[gd_scene load_steps=26 format=3 uid="uid://zone1_scene_001"]
+[gd_scene load_steps=28 format=3 uid="uid://zone1_scene_001"]
 
 [ext_resource type="Script" path="res://scripts/zones/zone1.gd" id="1_zone1"]
 [ext_resource type="Script" path="res://scripts/npcs/pnj.gd" id="2_pnj"]
@@ -7,6 +7,7 @@
 [ext_resource type="Script" path="res://scripts/puzzles/puzzle_roue_eau.gd" id="5_p3"]
 [ext_resource type="PackedScene" path="res://assets/models/environnement/nimbus_willow_2_tree.glb" id="6_aelith"]
 [ext_resource type="Script" path="res://scripts/interaction/point_interaction.gd" id="7_point"]
+[ext_resource type="Script" path="res://scripts/zones/fleur_bief.gd" id="8_fleur"]
 
 ; Collision partagée par tous les PNJ (radius=2.0)
 [sub_resource type="SphereShape3D" id="ss_pnj"]
@@ -65,6 +66,10 @@ size = Vector3(5.0, 0.3, 4.0)
 
 [sub_resource type="BoxMesh" id="bm_pont"]
 size = Vector3(5.0, 0.3, 4.0)
+
+; ── La fleur du bief ──────────────────────────────────────────────────────────
+[sub_resource type="SphereShape3D" id="ss_fleur"]
+radius = 1.6
 
 ; ── Grimoire ──────────────────────────────────────────────────────────────────
 [sub_resource type="SphereShape3D" id="ss_grimoire"]
@@ -395,6 +400,35 @@ shape = SubResource("bs_pont")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Puzzle3RoueEau/Pont"]
 mesh = SubResource("bm_pont")
+
+; ── LA FLEUR SANS NOM ─────────────────────────────────────────────────────────
+; De l'autre côté du pont, dans le bief (bande x ∈ [-30.7, -12.8], z ∈ [-36, -32]) :
+; la même fleur que sur l'oreiller d'Aelindra. Optionnelle, jamais bloquante.
+; On n'y arrive qu'une fois le pont déployé (Puzzle 3). Script : fleur_bief.gd.
+; Touffe, TouffePres et Petales sont des repères : le script y pose les modèles
+; (tools/gen_fleur.py). Ils guident le regard depuis le pont jusqu'à la fleur.
+[node name="FleurBief" type="Node3D" parent="."]
+position = Vector3(-20.5, 0.0, -34.6)
+script = ExtResource("8_fleur")
+
+[node name="ZoneFleur" type="Area3D" parent="FleurBief"]
+script = ExtResource("7_point")
+verbe = "Regarder la fleur"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="FleurBief/ZoneFleur"]
+shape = SubResource("ss_fleur")
+
+[node name="Touffe" type="Node3D" parent="FleurBief"]
+position = Vector3(-5.0, 0.0, 1.3)
+rotation = Vector3(0.0, 0.6, 0.0)
+
+[node name="TouffePres" type="Node3D" parent="FleurBief"]
+position = Vector3(1.3, 0.0, 0.5)
+rotation = Vector3(0.0, 2.1, 0.0)
+
+[node name="Petales" type="Node3D" parent="FleurBief"]
+position = Vector3(-2.7, 0.0, 0.8)
+rotation = Vector3(0.0, 0.25, 0.0)
 
 ; ── GRIMOIRE ──────────────────────────────────────────────────────────────────
 ; Caché dans une vieille maison à l'angle nord-est.
