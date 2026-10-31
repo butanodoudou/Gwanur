@@ -139,8 +139,13 @@ const FONDU_MUSIQUE: float = 2.0
 const NB_LECTEURS_SFX: int = 12
 # La musique s'efface un peu sous les dialogues
 const ATTENUATION_DIALOGUE_DB: float = -4.0
-# Un pas tous les ~1,7 m parcourus
-const FOULEE: float = 1.7
+# Les pas (voir _surveiller_pas) : un bruit à chaque appui des animations.
+# Sous SEUIL_PAS (m/s), on ne joue plus de pas (personnage quasi arrêté).
+const SEUIL_PAS: float = 0.8
+# Ajustement de volume, ajouté à celui du catalogue : plus doux en marche,
+# plus appuyé en course.
+const PAS_MARCHE_DB: float = -3.0
+const PAS_COURSE_DB: float = 2.5
 
 # ──────────────────────────────────────────────────────────────────────────────
 # ÉTAT
@@ -169,7 +174,7 @@ var _instant_scene: float = 0.0        # secondes depuis le dernier changement d
 
 # Nœuds surveillés (on vérifie is_instance_valid : ils peuvent être libérés)
 var _personnages: Array = []           # CharacterBase, pour les pas
-var _foulee: Dictionary = {}           # instance_id → distance parcourue
+var _foulee: Dictionary = {}           # instance_id → phase du cycle de pas (ou distance)
 var _puzzles_vus: Dictionary = {}      # "puzzle_oiseau" → le nœud (voir _verifier_branchements)
 var _zone: Node3D = null               # zone1, pour situer le ruisseau
 
@@ -598,6 +603,16 @@ func _surveiller_cibles() -> void:
 			jouer_sfx("interaction", -1 if id_joueur == 1 else 1)
 		_cibles_avant[id_joueur] = cible
 
+# LES PAS SUIVENT LES PIEDS
+# Les héros sont animés (character_base.gd) : un cycle de marche ou de course
+# dure 1 s dans le fichier, et le pied gauche se pose à la phase 0, le droit à
+# la phase 0,5 (tools/animer_personnages.py). On lit donc la position de
+# lecture du mélange marche/course dans l'AnimationTree (le paramètre
+# « parameters/allure/current_position », entre 0 et 1) et l'on joue un pas
+# chaque fois qu'elle franchit 0 ou 0,5 : le son tombe pile sur l'appui,
+# quelle que soit la vitesse (l'arbre accélère la cadence avec elle).
+# Sans arbre d'animation (modèle absent), on retombe sur une distance :
+# un appui tous les FOULEE_* / 2 mètres.
 func _surveiller_pas(delta: float) -> void:
 	# En pause, les personnages sont figés mais gardent leur vitesse : sans ce
 	# test, on entendrait des pas sous le menu pause.
@@ -609,15 +624,49 @@ func _surveiller_pas(delta: float) -> void:
 		var corps := perso as CharacterBody3D
 		var vitesse := Vector2(corps.velocity.x, corps.velocity.z).length()
 		var id: int = perso.get_instance_id()
-		if not corps.is_on_floor() or vitesse < 1.0:
-			# À l'arrêt : le prochain pas tombera dès qu'on repart
-			_foulee[id] = FOULEE * 0.7
-			continue
-		_foulee[id] = _foulee.get(id, 0.0) + vitesse * delta
-		if _foulee[id] >= FOULEE:
-			_foulee[id] = 0.0
-			jouer_sfx("pas_herbe", -1 if perso.get("id_joueur") == 1 else 1)
+		# 0 = marche, 1 = course (même calcul que character_base.gd).
+		var allure := clampf((vitesse - CharacterBase.VITESSE_MARCHE)
+			/ (CharacterBase.VITESSE_COURSE - CharacterBase.VITESSE_MARCHE), 0.0, 1.0)
+		var appui := false
+
+		var arbre := _arbre_de(perso)
+		if arbre != null:
+			var phase := fmod(float(arbre.get("parameters/allure/current_position")), 1.0)
+			var avant: float = _foulee.get(id, phase)
+			_foulee[id] = phase
+			# Franchissement de 0 (la phase repart de zéro) ou de 0,5.
+			appui = phase < avant or (avant < 0.5 and phase >= 0.5)
+		else:
+			var demi_foulee := lerpf(CharacterBase.FOULEE_MARCHE, CharacterBase.FOULEE_COURSE, allure) * 0.5
+			if vitesse < SEUIL_PAS:
+				_foulee[id] = demi_foulee * 0.7  # le prochain pas tombe dès qu'on repart
+			else:
+				_foulee[id] = _foulee.get(id, 0.0) + vitesse * delta
+				if _foulee[id] >= demi_foulee:
+					_foulee[id] = 0.0
+					appui = true
+
+		# Pas de pas en l'air, ni quand on piétine sur place (les jambes
+		# bougent encore un peu en ralentissant, mais le pied ne frappe plus).
+		if appui and corps.is_on_floor() and vitesse >= SEUIL_PAS:
+			jouer_sfx("pas_herbe", -1 if perso.get("id_joueur") == 1 else 1,
+				lerpf(PAS_MARCHE_DB, PAS_COURSE_DB, allure),
+				lerpf(1.0, 0.94, allure))
 	_personnages = _personnages.filter(func(p): return is_instance_valid(p))
+
+# L'AnimationTree construit par character_base.gd (null si le modèle n'est
+# pas animé). Gardé en cache dans les métadonnées du personnage.
+func _arbre_de(perso: Node) -> AnimationTree:
+	if not perso.has_meta("_audio_arbre"):
+		var trouve := perso.find_child("AnimationTree", true, false)
+		if trouve == null:
+			return null  # pas encore construit : on réessaiera
+		perso.set_meta("_audio_arbre", trouve)
+	var arbre = perso.get_meta("_audio_arbre")
+	if not is_instance_valid(arbre):
+		perso.remove_meta("_audio_arbre")
+		return null
+	return arbre as AnimationTree
 
 # ──────────────────────────────────────────────────────────────────────────────
 # AMBIANCES
