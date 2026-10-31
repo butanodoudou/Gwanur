@@ -827,6 +827,17 @@ Les neuf villageois (`pnj.gd`) sont encore des capsules colorées, ce qui se voi
 - **AnimationTree construit en code**. Les gestes ne jouent que sur le haut du corps, donc les jambes continuent de marcher. Accélération 30 m/s² et freinage 36 m/s², sans changer la vitesse max (5 m/s), donc les timings des puzzles restent les mêmes.
 - **PNJ** : même squelette, idle animée, ils tournent doucement le corps vers le joueur le plus proche (6 m, 70° au plus).
 
+### Export Windows
+**Décision :** `export_presets.cfg` est versionné (chemins relatifs uniquement) et produit `build/windows/Gwanur.exe`, un exécutable unique de 136 Mo dans lequel le jeu est embarqué (`embed_pck`). `tools/` et `docs/` sont exclus du jeu exporté. `build/` est ignoré par git.
+**Templates :** les templates officiels Godot 4.6.2 ont été téléchargés depuis la page des releases GitHub de Godot, vérifiés par SHA-512 contre `SHA512-SUMS.txt`, et seuls les Windows x86_64 ont été installés dans `%APPDATA%/Godot/export_templates/4.6.2.stable/`.
+**Licences :** Godot est sous licence MIT, et son texte doit accompagner le jeu. `tools/licences_export.gd` génère `build/windows/LICENCES.txt` (Godot, ses composants tiers, nos packs CC0) à partir de ce que le moteur fournit lui-même. Il est à relancer après chaque export.
+**Vérification d'un export :** les templates officiels refusent qu'on leur impose une scène en ligne de commande, même en debug. Pour tester la scène de jeu embarquée, on lance le binaire de l'éditeur depuis un dossier hors du projet : `godot --headless --main-pack build/windows/Gwanur.exe res://scenes/main.tscn --quit-after 900`. Seuls les fichiers réellement exportés sont alors utilisés.
+**Procédure complète :**
+```
+godot --headless --path . --export-release "Windows Desktop" build/windows/Gwanur.exe
+godot --headless --path . --script res://tools/licences_export.gd
+```
+
 ### Organisation — ce qu'on a appris
 - **Les worktrees d'agents partent parfois d'un vieux commit** (ici c89c7d0, le pivot RPG) au lieu de la branche courante. Chaque agent doit vérifier sa base en premier.
 - **Les agents ne lancent ni Godot ni Blender pendant que l'utilisateur joue** sur la même machine : les fenêtres le dérangent.
