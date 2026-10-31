@@ -827,6 +827,13 @@ Les neuf villageois (`pnj.gd`) sont encore des capsules colorées, ce qui se voi
 - **AnimationTree construit en code**. Les gestes ne jouent que sur le haut du corps, donc les jambes continuent de marcher. Accélération 30 m/s² et freinage 36 m/s², sans changer la vitesse max (5 m/s), donc les timings des puzzles restent les mêmes.
 - **PNJ** : même squelette, idle animée, ils tournent doucement le corps vers le joueur le plus proche (6 m, 70° au plus).
 
+### La fleur sans nom, derrière le pont
+**Contexte :** depuis que le ruisseau est un vrai obstacle, le pont du Puzzle 3 menait à une bande de terrain fermée et vide. Et l'intro annonce « Sur l'oreiller, une seule fleur. Ni Kael ni Mira n'en connaissent le nom. »
+**Décision :** la même fleur pousse dans le bief (`scripts/zones/fleur_bief.gd`, modèle `tools/gen_fleur.py`). C'est la preuve qu'Aelindra est passée par le pont la nuit de son départ. Un seul `PointInteraction`, ouvert aux deux joueurs, donne une réaction différente à Kael et à Mira, puis une ligne commune quand les deux l'ont vue. **Optionnelle** : elle n'est jamais un prérequis. Si on l'a trouvée, `TextesNarration.FIN_FLEUR` s'ajoute à l'écran de fin.
+**Le nom n'est jamais dit dans le jeu.** Dans le LORE, c'est le même mot que le vrai nom de la Tisserande, réservé à la Zone 5. *Écarté :* lui donner un nom elfique ou populaire. *Raison :* on tient la promesse de l'intro, et on ne grille pas une révélation future.
+**Lisibilité :** fleur agrandie (hampe d'environ 1 m), pétales « blanc de lune » légèrement émissifs, et une file de pétales tombés depuis le pont, comme des pas. *Écarté :* une lumière forte. Les matériaux ne contiennent pas « feuill », sinon la stylisation les traiterait comme du feuillage d'arbre.
+**Contrat :** `textes_narration.gd` gagne `FIN_FLEUR`. Les autres textes de la fleur vivent dans `fleur_bief.gd`, comme ceux des puzzles.
+
 ### Export Windows
 **Décision :** `export_presets.cfg` est versionné (chemins relatifs uniquement) et produit `build/windows/Gwanur.exe`, un exécutable unique de 136 Mo dans lequel le jeu est embarqué (`embed_pck`). `tools/` et `docs/` sont exclus du jeu exporté. `build/` est ignoré par git.
 **Templates :** les templates officiels Godot 4.6.2 ont été téléchargés depuis la page des releases GitHub de Godot, vérifiés par SHA-512 contre `SHA512-SUMS.txt`, et seuls les Windows x86_64 ont été installés dans `%APPDATA%/Godot/export_templates/4.6.2.stable/`.
@@ -852,8 +859,8 @@ godot --headless --path . --script res://tools/licences_export.gd
 - [x] La musique — thème Zone 1, menu, fin (piano, harpe, flûte, cordes, ré lydien)
 - [x] Intro (Acte 0), écran de fin, crédits, menu pause
 - [ ] Nom à mettre dans les crédits (marqueur `[NOM DU DÉVELOPPEUR]`)
-- [ ] Ce qu'il y a de l'autre côté du pont du Puzzle 3 (le bief est fermé et vide)
-- [ ] Export Windows (templates d'export Godot à installer)
+- [x] Ce qu'il y a de l'autre côté du pont du Puzzle 3 → la fleur sans nom (voir ci-dessous)
+- [x] Export Windows → `build/windows/Gwanur.exe` + `LICENCES.txt`
 - [x] Le menu principal
 - [x] UI — HUD moralité + indicateur d'interaction (par joueur, dans son SubViewport)
 - [x] UI — retour visuel sur la progression du Puzzle 1 (message d'état coop)
