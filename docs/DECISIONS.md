@@ -834,6 +834,13 @@ Les neuf villageois (`pnj.gd`) sont encore des capsules colorées, ce qui se voi
 **Lisibilité :** fleur agrandie (hampe d'environ 1 m), pétales « blanc de lune » légèrement émissifs, et une file de pétales tombés depuis le pont, comme des pas. *Écarté :* une lumière forte. Les matériaux ne contiennent pas « feuill », sinon la stylisation les traiterait comme du feuillage d'arbre.
 **Contrat :** `textes_narration.gd` gagne `FIN_FLEUR`. Les autres textes de la fleur vivent dans `fleur_bief.gd`, comme ceux des puzzles.
 
+### Finitions visuelles et sonores
+- **Chemins pavés** : chaque chemin est un seul ruban plat dessiné par `shaders/paves.gdshader` (pavage de Voronoi déformé, pierres dorées variées, jointures où l'on voit le sol), au lieu de 76 dalles rectangulaires. L'ombre de la pierre est teintée chaud : les pavés ne virent plus au mauve sous la canopée. *Écarté :* des pierres en MultiMesh (centaines d'instances et d'ombres, payées deux fois). Coût : environ +0,3 ms GPU sur la vue qui les montre. Les tirages aléatoires sont identiques, donc le décor ne bouge pas.
+- **Le Rejet (saule)** ramené dans la palette par un réglage par texture dans `stylisation.gd` (`REGLAGES_TEXTURE` : désaturation, reflets dorés). *Écarté :* retoucher les PNG ou réexporter le .glb de 11 Mo. Ça reste réversible et versionné en code. `tools/recolor_willow.py` est obsolète.
+- **Feuillage de l'Aelith sans facettes** : normales sphériques par grappe, calculées à la génération dans Blender (`marquer_grappe()` dans `blender_commun.py`). Coût nul à l'exécution. *Écarté :* le calcul dans le shader (un seul centre sur 110 m).
+- **Pas calés sur les appuis** : l'AudioManager lit la phase de l'AnimationTree (`parameters/allure/current_position`) et joue un pas à chaque passage de 0 et 0,5. Résultat : un pas tous les 0,6 m en marche et 1,5 m en course, plus fort en course. *Écarté :* des pistes « method » dans les animations (doubles déclenchements pendant le mélange).
+- **Gros rochers solides** : cylindre de collision légèrement plus étroit que la pierre. Mieux vaut un rocher qu'on frôle qu'un mur invisible.
+
 ### Export Windows
 **Décision :** `export_presets.cfg` est versionné (chemins relatifs uniquement) et produit `build/windows/Gwanur.exe`, un exécutable unique de 136 Mo dans lequel le jeu est embarqué (`embed_pck`). `tools/` et `docs/` sont exclus du jeu exporté. `build/` est ignoré par git.
 **Templates :** les templates officiels Godot 4.6.2 ont été téléchargés depuis la page des releases GitHub de Godot, vérifiés par SHA-512 contre `SHA512-SUMS.txt`, et seuls les Windows x86_64 ont été installés dans `%APPDATA%/Godot/export_templates/4.6.2.stable/`.
