@@ -59,8 +59,16 @@ const MOTS_FEUILLAGE := ["feuill", "leaf", "leaves", "foliage", "aiguille", "nee
 # sur elle n'auraient aucun sens.
 const TAILLE_MAX_VOLUME := 16.0
 
-# Matériau d'origine (ou clé texte pour le feuillage) → ShaderMaterial toon.
-static var _cache: Dictionary = {}
+# Le cache : matériau d'origine (ou clé texte pour le feuillage) → ShaderMaterial
+# toon. Rangé dans les métadonnées de la fenêtre racine plutôt que dans une
+# variable statique : il disparaît ainsi avec l'arbre de scène à la fermeture
+# (une variable statique garderait les matériaux en vie jusqu'après la sortie,
+# et Godot se plaindrait de « resources still in use at exit »).
+static func _cache() -> Dictionary:
+	var racine := (Engine.get_main_loop() as SceneTree).root
+	if not racine.has_meta("cache_stylisation"):
+		racine.set_meta("cache_stylisation", {})
+	return racine.get_meta("cache_stylisation")
 static var _suivi_branche: bool = false
 
 static func est_active() -> bool:
@@ -236,8 +244,8 @@ static func _convertir(mat: BaseMaterial3D, feuillage: Dictionary) -> ShaderMate
 	var cle: Variant = mat
 	if not feuillage.is_empty():
 		cle = "%d|%s|%s" % [mat.get_instance_id(), feuillage["centre"], feuillage["etendue"]]
-	if _cache.has(cle):
-		return _cache[cle]
+	if _cache().has(cle):
+		return _cache()[cle]
 
 	var transparent := mat.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED
 	var decoupe := mat.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR \
@@ -286,24 +294,24 @@ static func _convertir(mat: BaseMaterial3D, feuillage: Dictionary) -> ShaderMate
 		if mat.albedo_texture != null:
 			sm.set_shader_parameter("saturation", 0.7)
 
-	_cache[cle] = sm
+	_cache()[cle] = sm
 	return sm
 
 static func _materiau_terre(mat: BaseMaterial3D) -> ShaderMaterial:
-	if _cache.has(mat):
-		return _cache[mat]
+	if _cache().has(mat):
+		return _cache()[mat]
 	var sm := ShaderMaterial.new()
 	sm.shader = SHADER_TERRE
 	sm.resource_name = "terre_battue_toon"
 	sm.set_shader_parameter("albedo", mat.albedo_color)
-	_cache[mat] = sm
+	_cache()[mat] = sm
 	return sm
 
 static func _materiau_sol() -> ShaderMaterial:
-	if _cache.has("sol"):
-		return _cache["sol"]
+	if _cache().has("sol"):
+		return _cache()["sol"]
 	var sm := ShaderMaterial.new()
 	sm.shader = SHADER_SOL
 	sm.resource_name = "sol_toon"
-	_cache["sol"] = sm
+	_cache()["sol"] = sm
 	return sm

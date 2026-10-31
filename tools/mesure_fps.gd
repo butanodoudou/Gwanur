@@ -5,7 +5,8 @@
 # Lancer (dans une fenêtre, pas en --headless : il faut un vrai rendu) :
 #   godot --path . res://tools/mesure_fps.tscn --resolution 1920x1080
 #
-# Trois prises de 6 secondes chacune, après 2 secondes de chauffe :
+# Trois prises de 6 secondes chacune, après 2 secondes de chauffe (la toute
+# première, « chauffe », compile les shaders : ses chiffres ne comptent pas) :
 #   - « depart »  : les héros à leur point de départ, sur la place ;
 #   - « prairie » : au milieu de l'herbe la plus dense, caméras tournées vers
 #                   le champ (le pire cas pour l'herbe) ;
@@ -22,6 +23,7 @@ const DUREE_CHAUFFE := 2.0
 const DUREE_PRISE := 6.0
 
 const PRISES := [
+	{ "nom": "chauffe", "kael": Vector3(-1, 1, 5),    "mira": Vector3(1, 1, 5),    "angle": 0.0 },
 	{ "nom": "depart",  "kael": Vector3(-1, 1, 5),    "mira": Vector3(1, 1, 5),    "angle": 0.0 },
 	{ "nom": "prairie", "kael": Vector3(-30, 1, 12),  "mira": Vector3(34, 1, 2),  "angle": 2.2 },
 	{ "nom": "nord",    "kael": Vector3(-3, 1, -18),  "mira": Vector3(3, 1, -18),  "angle": PI },
