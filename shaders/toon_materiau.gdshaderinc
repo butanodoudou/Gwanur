@@ -49,6 +49,10 @@ uniform float force_normales_spheriques : hint_range(0.0, 1.0) = 0.0;
 uniform float amplitude_vent = 0.12;
 uniform float hauteur_vent = 8.0;
 uniform float force_translucidite : hint_range(0.0, 1.0) = 0.35;
+// Reflets dorés : des taches du feuillage tirent vers l'or (le Rejet, enfant
+// de l'Aelith aux feuilles « presque dorées »). 0 = aucun.
+uniform float reflets_dores : hint_range(0.0, 1.0) = 0.0;
+uniform vec3 couleur_reflets : source_color = vec3(0.86, 0.66, 0.24);
 group_uniforms;
 #endif
 
@@ -94,6 +98,16 @@ void fragment() {
 				+ bruit3(position_locale * echelle_aquarelle * 3.1) * 0.35;
 		c.rgb *= 1.0 + (n - 0.5) * 2.0 * aquarelle;
 	}
+#ifdef FEUILLAGE
+	if (reflets_dores > 0.0) {
+		// De grandes taches (à l'échelle d'une grappe) : la teinte glisse vers
+		// l'or en gardant la luminosité de la feuille.
+		float t = smoothstep(0.5, 0.78, bruit3(position_locale * 0.45 + 7.0));
+		float lum = dot(c.rgb, vec3(0.3, 0.59, 0.11));
+		vec3 or_ = couleur_reflets * (lum / max(dot(couleur_reflets, vec3(0.3, 0.59, 0.11)), 0.01)) * 1.15;
+		c.rgb = mix(c.rgb, or_, t * reflets_dores);
+	}
+#endif
 	ALBEDO = c.rgb;
 	ROUGHNESS = 1.0;
 	SPECULAR = 0.0;

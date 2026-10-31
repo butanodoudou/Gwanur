@@ -293,9 +293,35 @@ static func _convertir(mat: BaseMaterial3D, feuillage: Dictionary) -> ShaderMate
 		# Les textures de feuilles importées sont souvent très saturées.
 		if mat.albedo_texture != null:
 			sm.set_shader_parameter("saturation", 0.7)
+			_appliquer_reglage_texture(sm, mat.albedo_texture)
 
 	_cache()[cle] = sm
 	return sm
+
+# Réglages propres à UNE texture importée qu'on ne peut pas retoucher à la
+# source (texture extraite d'un .glb externe : Godot la regénère à l'import).
+# Clé : le nom du fichier de texture.
+const REGLAGES_TEXTURE := {
+	# Le Rejet (le saule de la place, nimbus_willow) : ses feuilles sont d'un
+	# vert fluo hors palette. On les désature franchement, puis on les teinte
+	# vers un vert mousse chaud, avec des reflets dorés — c'est l'enfant de
+	# l'Aelith. Il reste le point focal de la place par sa taille et sa
+	# silhouette, plus par une couleur criarde.
+	"nimbus_willow_2_tree_1.png": {
+		"saturation": 0.5,
+		"albedo": Color(0.92, 0.92, 0.66),
+		"reflets_dores": 0.4,
+		"force_translucidite": 0.3,
+	},
+}
+
+static func _appliquer_reglage_texture(sm: ShaderMaterial, texture: Texture2D) -> void:
+	var fichier := texture.resource_path.get_file()
+	if not REGLAGES_TEXTURE.has(fichier):
+		return
+	var reglage: Dictionary = REGLAGES_TEXTURE[fichier]
+	for parametre in reglage:
+		sm.set_shader_parameter(parametre, reglage[parametre])
 
 static func _materiau_terre(mat: BaseMaterial3D) -> ShaderMaterial:
 	if _cache().has(mat):

@@ -9,8 +9,8 @@
 # RÈGLE IMPORTANTE — LE DÉCOR NE BLOQUE PAS LE JOUEUR
 # Presque tout ici est un simple `MeshInstance3D` : un objet qu'on voit mais qui
 # n'a AUCUNE collision. On traverse les fleurs, les caisses, les tonneaux.
-# Seuls les troncs d'arbres ont une collision (sinon marcher à travers un arbre
-# est trop bizarre). La liberté de déplacement reste intacte.
+# Seuls les troncs d'arbres et les GROS rochers ont une collision (sinon
+# marcher à travers est trop bizarre). La liberté de déplacement reste intacte.
 #
 # UTILISATION (depuis zone1.gd) :
 #     var decor := DecorVillage.new()
@@ -190,33 +190,66 @@ func _plaque_de_terre(centre: Vector3, taille: Vector2) -> void:
 # CHEMINS
 # ──────────────────────────────────────────────────────────────────────────────
 #
-# Des dalles plates posées au ras du sol (y = 0.03). Elles guident l'œil du
-# joueur depuis l'entrée sud jusqu'à l'Aelith, puis jusqu'à la porte nord.
+# Un chemin = UN ruban plat (une boîte de 2 cm, au ras du sol) sur lequel le
+# shader shaders/paves.gdshader dessine des pavés irréguliers aux bords
+# arrondis, de teintes variées, aux jointures évidées (on y voit la terre ou
+# l'herbe du dessous) et au bord qui s'effrite dans l'herbe. Les chemins
+# guident l'œil du joueur depuis l'entrée sud jusqu'à l'Aelith, puis jusqu'à
+# la porte nord.
+#
+# Avant, chaque chemin était une rangée de dalles rectangulaires (76 boîtes) :
+# des aplats gris-beige qui se voyaient « posés ». Quatre rubans coûtent
+# aussi moins cher à dessiner que 76 boîtes.
+#
+# herbe.gd retrouve ces rubans dans l'arbre de scène (boîtes plates au ras
+# du sol) et n'y fait pas pousser d'herbe.
+
+const SHADER_PAVES := preload("res://shaders/paves.gdshader")
+
+var _materiau_paves: ShaderMaterial = null
 
 func _tracer_les_chemins() -> void:
-	_dalles_entre(Vector3( 0, 0,  33), Vector3(  0, 0,   6), 3.2, 26)  # entrée → Aelith
-	_dalles_entre(Vector3( 0, 0,  -6), Vector3(  0, 0, -34), 2.8, 24)  # Aelith → porte nord
-	_dalles_entre(Vector3( 4, 0,   2), Vector3( 18, 0,  12), 2.0, 12)  # vers chez Lira
-	_dalles_entre(Vector3(-4, 0,  -2), Vector3(-19, 0, -11), 2.0, 14)  # vers le moulin
+	_paver_entre(Vector3( 0, 0,  33), Vector3(  0, 0,   6), 3.2, 26)  # entrée → Aelith
+	_paver_entre(Vector3( 0, 0,  -6), Vector3(  0, 0, -34), 2.8, 24)  # Aelith → porte nord
+	_paver_entre(Vector3( 4, 0,   2), Vector3( 18, 0,  12), 2.0, 12)  # vers chez Lira
+	_paver_entre(Vector3(-4, 0,  -2), Vector3(-19, 0, -11), 2.0, 14)  # vers le moulin
 
-func _dalles_entre(depart: Vector3, arrivee: Vector3, largeur: float, nombre: int) -> void:
-	for i in nombre:
-		# lerp() = interpolation : t va de 0 (départ) à 1 (arrivée).
-		var t   := float(i) / float(nombre - 1)
-		var pos := depart.lerp(arrivee, t)
-		# Petit décalage : un chemin de village n'est jamais une ligne droite.
-		pos.x += _rng.randf_range(-0.5, 0.5)
-		pos.z += _rng.randf_range(-0.4, 0.4)
-		pos.y  = 0.03
+# `nombre` est l'ancien nombre de dalles : on tire encore autant de nombres au
+# hasard qu'avant (6 par dalle), pour que la suite du décor — arbres, rochers,
+# fleurs, tirés au même générateur — reste EXACTEMENT à la même place.
+func _paver_entre(depart: Vector3, arrivee: Vector3, largeur: float, nombre: int) -> void:
+	for i in nombre * 6:
+		_rng.randf()
 
-		var dalle := BoxMesh.new()
-		dalle.size = Vector3(
-			largeur * _rng.randf_range(0.75, 1.10),
-			0.06,
-			largeur * _rng.randf_range(0.50, 0.80)
-		)
-		var teinte := C_PIERRE.lerp(C_PIERRE_2, _rng.randf())
-		_prop(dalle, pos, teinte, _rng.randf_range(-0.25, 0.25))
+	var direction := arrivee - depart
+	var ruban := BoxMesh.new()
+	# Un peu plus large et plus long que l'ancienne rangée de dalles : le bord
+	# s'effrite, le chemin « utile » reste aussi large qu'avant.
+	ruban.size = Vector3(largeur + 0.8, 0.02, direction.length() + largeur * 0.7)
+
+	if _materiau_paves == null:
+		_materiau_paves = ShaderMaterial.new()
+		_materiau_paves.shader = SHADER_PAVES
+		_materiau_paves.resource_name = "paves_toon"
+		# L'ombre teintée par défaut est bleu-violet (la lumière du ciel) : sur
+		# une pierre beige, elle vire au mauve. Pour la pierre, une ombre plus
+		# chaude et plus discrète.
+		_materiau_paves.set_shader_parameter("teinte_ombre", Color(0.78, 0.70, 0.62))
+		_materiau_paves.set_shader_parameter("force_ombre_teintee", 0.22)
+
+	var mi := MeshInstance3D.new()
+	mi.name = "Chemin"
+	mi.mesh = ruban
+	mi.material_override = _materiau_paves
+	# Juste au-dessus de la terre battue (dessus à 4 cm) : pas de clignotement.
+	mi.position = (depart + arrivee) * 0.5 + Vector3(0, 0.05, 0)
+	# Tourner la boîte (longue selon Z) dans l'axe du chemin.
+	mi.rotation.y = atan2(direction.x, direction.z)
+	# 2 cm d'épaisseur : son ombre ne se verrait pas, autant ne pas la calculer.
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.set_instance_shader_parameter("demi_taille", ruban.size * 0.5)
+	mi.set_instance_shader_parameter("graine", float(nombre) * 0.37 + depart.x * 0.11)
+	add_child(mi)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # VÉGÉTATION : ARBRES, SOUS-BOIS, FLEURS, ROCHERS
@@ -276,14 +309,17 @@ const VEGETATION := {
 	"fougere_large":   { "portee": 40.0, "ombre": false },
 	"fleurs_touffe":   { "portee": 30.0, "ombre": false },
 	"fleurs_hautes":   { "portee": 30.0, "ombre": false },
-	# Minéral et bois mort — traversables, comme les anciens rochers
+	# Minéral et bois mort. Les petits cailloux se traversent ; les GROS
+	# rochers (« bloc » : [rayon, hauteur] du modèle à l'échelle 1, mesurés sur
+	# sa boîte englobante) reçoivent un cylindre de collision quand ils sont
+	# posés en grand (voir ECHELLE_BLOC_SOLIDE).
 	"rocher_1":        { "portee": 60.0 },
-	"rocher_2":        {},
+	"rocher_2":        { "bloc": [0.54, 0.78] },
 	"rocher_moussu_1": { "portee": 50.0 },
 	"rocher_moussu_2": { "portee": 50.0 },
 	"rocher_moussu_3": { "portee": 50.0 },
-	"rocher_moussu_4": {},
-	"rocher_moussu_5": {},
+	"rocher_moussu_4": { "bloc": [0.43, 0.72] },
+	"rocher_moussu_5": { "bloc": [0.41, 0.54] },
 	"souche":          { "portee": 50.0 },
 	"tronc_couche":    { "portee": 60.0 },
 }
@@ -297,6 +333,12 @@ const BOSQUETS := {
 	"pinede":  ["pin_1", "pin_2", "pin_3"],
 	"mixte":   ["feuillu_haut", "feuillu_rond", "feuillu_jeune", "bouleau_1", "pin_2"],
 }
+
+# Un rocher « bloc » n'est solide qu'à partir de cette échelle : les gros
+# rochers des groupes (1,6 à 2,6) et les blocs tombés du rempart (2,4 à 3,6).
+# Ils ne bloquent aucun passage : `_emplacement_libre()` les tient déjà à
+# l'écart des chemins, des maisons et des pièces de puzzle.
+const ECHELLE_BLOC_SOLIDE := 1.5
 
 # Taille des « cases » qui découpent les petits éléments (fleurs, fougères…)
 # en plusieurs MultiMesh. Voir `_verser_les_multimesh()`.
@@ -497,7 +539,7 @@ func _planter(pos: Vector3, nom: String, echelle: float, ecrasement: float = 1.0
 	# La collision reste un cylindre par tronc — invisible, et beaucoup moins
 	# cher qu'une collision sur le maillage. Les modèles recolorés ont le pied
 	# du tronc sur leur origine (tools/recolor_cc0.py) : le cylindre tombe pile
-	# dedans. Buissons, fleurs et rochers n'en ont pas : on les traverse.
+	# dedans. Buissons, fleurs et petits cailloux n'en ont pas : on les traverse.
 	var infos: Dictionary = VEGETATION.get(nom, {})
 	if float(infos.get("rayon_tronc", 0.0)) > 0.0:
 		var hauteur: float = float(infos["hauteur"]) * echelle
@@ -506,6 +548,13 @@ func _planter(pos: Vector3, nom: String, echelle: float, ecrasement: float = 1.0
 			float(infos["rayon_tronc"]) * echelle,
 			hauteur
 		)
+	# Les gros rochers : un cylindre un peu plus étroit que le rocher (rayon
+	# pris sur son côté le plus court, car il tourne au hasard) — on bute sur
+	# la pierre, jamais sur un mur invisible à côté d'elle.
+	elif infos.has("bloc") and echelle >= ECHELLE_BLOC_SOLIDE:
+		var bloc: Array = infos["bloc"]
+		var haut: float = float(bloc[1]) * echelle * ecrasement
+		_collision_cylindre(pos + Vector3(0, haut * 0.5, 0), float(bloc[0]) * echelle * 0.95, haut)
 
 # Verse les plantations dans des MultiMeshInstance3D.
 #
