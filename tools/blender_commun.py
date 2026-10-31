@@ -255,6 +255,73 @@ def branche(nom, depart, arrivee, rayon_depart, rayon_arrivee, couleur, segments
 # ──────────────────────────────────────────────────────────────────────────────
 
 
+ATTR_GRAPPE = "grappe_centre"
+ATTR_APLAT = "grappe_aplat"
+
+
+def marquer_grappe(objet, aplatissement=1.0):
+	"""Marque une boule de feuillage pour lui donner, à l'export, des normales
+	sphériques calculées depuis SON PROPRE centre.
+
+	Pourquoi : une icosphère à 80 ou 320 faces, ombrée « à plat », montre
+	chacune de ses facettes. BotW et les films Ghibli peignent un arbre comme
+	quelques MASSES douces : chaque grappe s'éclaire comme une seule boule.
+	Le shader de Godot sait déjà le faire pour un petit arbre (une seule
+	sphère englobante), mais pas pour la canopée de l'Aelith (110 m) : il faut
+	une sphère PAR GRAPPE, ce qu'on ne connaît qu'ici, à la génération.
+
+	Le centre (en coordonnées du monde) et l'aplatissement sont rangés dans
+	deux attributs de sommet, qui survivent à la fusion de `exporter()`.
+	"""
+	if objet is None:
+		return
+	mesh = objet.data
+	centre = objet.matrix_world.translation
+	attr_c = mesh.attributes.new(ATTR_GRAPPE, "FLOAT_VECTOR", "POINT")
+	attr_a = mesh.attributes.new(ATTR_APLAT, "FLOAT", "POINT")
+	for i in range(len(mesh.vertices)):
+		attr_c.data[i].vector = centre
+		attr_a.data[i].value = max(aplatissement, 0.05)
+
+
+def _normales_des_grappes(objet):
+	"""Normales par coin de face (« custom split normals ») : radiales depuis
+	le centre de leur grappe pour les sommets marqués, la normale de la face
+	(rendu facetté inchangé) pour tout le reste.
+
+	Une grappe aplatie (ellipsoïde) reçoit la normale d'un ellipsoïde un peu
+	moins plat qu'elle : le dessus reste clair, le dessous sombre, sans
+	bascule brutale sur le bord.
+	"""
+	mesh = objet.data
+	monde = objet.matrix_world
+	vers_local = monde.to_3x3().inverted()
+	centres = mesh.attributes[ATTR_GRAPPE].data
+	aplats = mesh.attributes[ATTR_APLAT].data
+
+	normales = []
+	for poly in mesh.polygons:
+		for li in poly.loop_indices:
+			v = mesh.loops[li].vertex_index
+			aplat = aplats[v].value
+			if aplat <= 0.0:
+				normales.append(poly.normal.copy())
+				continue
+			d = monde @ mesh.vertices[v].co - Vector(centres[v].vector)
+			d.z /= aplat
+			n = (vers_local @ d).normalized()
+			normales.append(n)
+	# Les coins portent maintenant leur propre normale : il faut des faces
+	# « lisses » pour que Blender (et l'export glTF) les utilisent. Les faces
+	# non marquées gardent leur normale de face : elles restent facettées.
+	for poly in mesh.polygons:
+		poly.use_smooth = True
+	mesh.normals_split_custom_set(normales)
+	# Les attributs de travail n'ont rien à faire dans le .glb.
+	mesh.attributes.remove(mesh.attributes[ATTR_GRAPPE])
+	mesh.attributes.remove(mesh.attributes[ATTR_APLAT])
+
+
 def exporter(sous_dossier, nom_fichier, lisse=False):
 	"""Fusionne tous les objets de la scène et exporte en .glb.
 
@@ -278,6 +345,11 @@ def exporter(sous_dossier, nom_fichier, lisse=False):
 		bpy.ops.object.shade_smooth()
 	else:
 		bpy.ops.object.shade_flat()
+
+	# Des grappes de feuillage marquées par marquer_grappe() : elles reçoivent
+	# des normales « sphériques » (voir _normales_des_grappes).
+	if ATTR_GRAPPE in bpy.context.active_object.data.attributes:
+		_normales_des_grappes(bpy.context.active_object)
 
 	bpy.ops.export_scene.gltf(
 		filepath=chemin,

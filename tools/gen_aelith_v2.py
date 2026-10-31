@@ -42,8 +42,16 @@ from mathutils import Vector
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from blender_commun import (
-	boule, branche, cylindre, vider_la_scene, exporter,
+	boule, branche, cylindre, vider_la_scene, exporter, marquer_grappe,
 )
+
+
+def grappe(*args, **kwargs):
+	"""Une boule de feuillage aux normales sphériques (voir marquer_grappe) :
+	elle s'éclaire comme une masse douce, pas comme une boule à facettes."""
+	objet = boule(*args, **kwargs)
+	marquer_grappe(objet, kwargs.get("aplatissement", 1.0))
+	return objet
 
 SOUS_DOSSIER = "environnement"
 
@@ -174,13 +182,13 @@ def paroi():
 		# Plus on monte, plus la paroi est loin du centre (elle s'évase).
 		rayon = RAYON_INTERIEUR + (z / HAUTEUR_PAROI) * 4.0 - random.uniform(1.0, 4.0)
 		x, y = _vers(angle, rayon)
-		boule(
+		grappe(
 			f"Mousse_{i}",
 			random.uniform(1.8, 5.0),
 			(x, y, z),
 			random.choice(["mousse", "feuille", "feuille_sombre"]),
 			aplatissement=random.uniform(0.4, 0.7),
-			subdivisions=1,
+			subdivisions=2,  # 320 faces : une silhouette ronde, pas un hexagone
 			rotation=(0, 0, random.uniform(0, math.tau)),
 		)
 
@@ -195,14 +203,14 @@ def paroi():
 		bout = Vector((x * 0.94, y * 0.94, z + random.uniform(5.0, 9.0)))
 		branche(f"ArbrePerche_{i}", (x, y, z), bout, 0.7, 0.35, "ecorce", segments=5)
 		for j in range(4):
-			boule(
+			grappe(
 				f"CouronnePerchee_{i}_{j}",
 				random.uniform(1.8, 3.2),
 				bout + Vector((random.uniform(-2, 2), random.uniform(-2, 2),
 							   random.uniform(-0.5, 2.0))),
 				random.choice(["feuille", "feuille_clair"]),
 				aplatissement=0.85,
-				subdivisions=1,
+				subdivisions=2,
 			)
 
 	# Des lianes qui pendent le long de la paroi — l'échelle se lit dans ces
@@ -253,7 +261,7 @@ def canopee():
 		for t in (0.35, 0.65, 0.95):
 			centre = milieu.lerp(sommet, t)
 			for j in range(4):
-				boule(
+				grappe(
 					f"Feuillage_{i}_{t}_{j}",
 					random.uniform(6.0, 11.0),
 					centre + Vector((random.uniform(-6, 6), random.uniform(-6, 6),
@@ -271,7 +279,7 @@ def canopee():
 		exterieur = Vector((ex, ey, BASE_BRANCHES + hauteur_1 + random.uniform(-6.0, 10.0)))
 		branche(f"Exterieure_{i}", milieu, exterieur, 3.0, 1.2, "ecorce_aelith", segments=6)
 		for j in range(3):
-			boule(
+			grappe(
 				f"FeuillageExt_{i}_{j}",
 				random.uniform(8.0, 14.0),
 				exterieur + Vector((random.uniform(-7, 7), random.uniform(-7, 7),
@@ -285,7 +293,7 @@ def canopee():
 		# qui fait le plafond. Sans lui, la canopée n'existe qu'à l'extérieur
 		# et le village a l'air posé au fond d'un cratère de piliers.
 		for j in range(3):
-			boule(
+			grappe(
 				f"FeuillageInterieur_{i}_{j}",
 				random.uniform(9.0, 15.0),
 				sommet + Vector((random.uniform(-8, 8), random.uniform(-8, 8),
